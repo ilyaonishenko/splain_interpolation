@@ -73,6 +73,7 @@
     <Compile Include="additional\Interpolation.cs" />
     <Compile Include="additional\InterpolationAlgorithm.cs" />
     <Compile Include="Generator.cs" />
+    <Compile Include="GlobalValues.cs" />
     <Compile Include="InterpolationMethod.cs" />
     <Compile Include="LinearSplineInterpolation.cs" />
     <Compile Include="additional\Number.cs" />
@@ -111,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="bin\Debug\input.txt" />
+    <Content Include="task3.txt" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">

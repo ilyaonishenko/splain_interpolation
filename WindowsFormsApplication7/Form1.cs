@@ -296,5 +296,10 @@ namespace WindowsFormsApplication7
             }
             chart1.Series["interpolated4"].ChartType = SeriesChartType.Spline;
         }
+
+        private void label8_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
