@@ -28,8 +28,6 @@ namespace WindowsFormsApplication7
         // Количество опорных точек
         public static int SIZE = 0;
 
-
-
         public static void WaitForSingleObject()
         {
             //.net аналог WaitForSingleObject() winapi функции
@@ -53,7 +51,18 @@ namespace WindowsFormsApplication7
             //.net аналог выхода из критической секции
             Monitor.Exit(lockObj);
         }
-      
 
+        public class SplineBox
+        {
+            public int POWER = 0;
+            public List<double> listX;
+            public List<double> listY;
+            public SplineBox(int power)
+            {
+                POWER = power;
+                listX = new List<double>();
+                listY = new List<double>();
+            }
+        }
     }
 }
