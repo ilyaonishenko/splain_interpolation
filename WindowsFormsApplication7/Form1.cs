@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.IO;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace WindowsFormsApplication7
 {
@@ -24,27 +25,27 @@ namespace WindowsFormsApplication7
 
         double x_same = 0;
 
+        private static int cycleCount = 0;
+
         StreamReader reader;
 
         GlobalValues.SplineBox spline1;
         GlobalValues.SplineBox spline2;
         GlobalValues.SplineBox spline3;
 
-        List<double> xlist;
-        List<double> ylist;
-
         public Form1()
         {
             InitializeComponent();
             //button3.Enabled = false;
             button4.Enabled = false;
+            GlobalValues.LogToFile = true;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             AllocConsole();
-            xlist = new List<double>();
-            ylist = new List<double>();
+            GlobalValues.xlist = new List<double>();
+            GlobalValues.ylist = new List<double>();
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -130,13 +131,14 @@ namespace WindowsFormsApplication7
             /*
             listx.Clear();
             listy.Clear();
-             * */
+             *
             spline1.listX = new List<double>();
             spline1.listY = new List<double>();
             spline2.listX = new List<double>();
             spline2.listY = new List<double>();
             spline3.listX = new List<double>();
             spline3.listY = new List<double>();
+             *  */
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -237,21 +239,31 @@ namespace WindowsFormsApplication7
 
             this.clearChart();
             this.realChart();
+            string paramsLog = string.Format("Начало работы");
+            Logger.Current.WriteLine(paramsLog);
+            StartThreads();
+
+            drawChart(spline1, chart1);
+            drawChart(spline2, chart2);
+            drawChart(spline3, chart3);
+            /*
             this.checkSplines(spline1,chart1);
             this.checkSplines(spline2,chart2);
             this.checkSplines(spline3,chart3);
+             * */
         }
 
-        private void checkSplines(GlobalValues.SplineBox spline, Chart chart)
+        private static void checkSplines(GlobalValues.SplineBox spline, Chart chart)
         {
-            xlist = GlobalValues.X.ToList<double>();
-            ylist = GlobalValues.Y.ToList<double>();
+            GlobalValues.xlist = GlobalValues.X.ToList<double>();
+            GlobalValues.ylist = GlobalValues.Y.ToList<double>();
+            Thread.Sleep(5);
 
             switch(spline.POWER)
             {
                 case 1:
                     LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
-                    splineInterpol.Init(xlist, ylist);
+                    splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                     for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
                     {
                         spline.listX.Add(i);
@@ -261,7 +273,7 @@ namespace WindowsFormsApplication7
                 case 2:
                     //MessageBox.Show("do not work for now");
                     QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
-                    quadraticSplineInterpol.Init(xlist, ylist);
+                    quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                     for(int i = Convert.ToInt32(GlobalValues.X[0]); i< GlobalValues.X[GlobalValues.X.Length-1]; i++)
                     {
                         spline.listX.Add(i);
@@ -270,7 +282,7 @@ namespace WindowsFormsApplication7
                     break;
                 case 3:
                     CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
-                    cubicSplineInterpol.Init(xlist, ylist);
+                    cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                     for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
                     {
                         spline.listX.Add(i);
@@ -279,7 +291,7 @@ namespace WindowsFormsApplication7
                     break;
                 default:
                     CubicSplineInterpolation cubicSplineInterpol1 = new CubicSplineInterpolation();
-                    cubicSplineInterpol1.Init(xlist, ylist);
+                    cubicSplineInterpol1.Init(GlobalValues.xlist, GlobalValues.ylist);
                     for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
                     {
                         spline.listX.Add(i);
@@ -287,6 +299,10 @@ namespace WindowsFormsApplication7
                     }
                     break;
             }
+        }
+
+        private void drawChart(GlobalValues.SplineBox spline, Chart chart)
+        {
             for (int i = 0; i < spline.listX.Count; i++)
             {
                 chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
@@ -297,6 +313,82 @@ namespace WindowsFormsApplication7
         private void label8_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void StartThreads()
+        {
+            ProcessTimeStopwatch processTimeStopwatch = new ProcessTimeStopwatch();
+            processTimeStopwatch.Start();
+            foreach(var spline1Priority in GlobalValues.ThreadPriorities)
+            {
+                foreach(var spline2Priority in GlobalValues.ThreadPriorities)
+                {
+                    foreach(var spline3Priority in GlobalValues.ThreadPriorities)
+                    {
+                        GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                        try
+                        {
+                            cycleCount++;
+                            Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
+                            StartNewThread(spline1, chart1, spline1Priority);
+                            StartNewThread(spline2, chart2, spline2Priority);
+                            StartNewThread(spline3, chart3, spline3Priority);
+                        }
+                        finally
+                        {
+                            GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                        }
+                        Thread.Sleep(10);
+                        GlobalValues.SevEvent();
+                    }
+                }
+            }
+            processTimeStopwatch.Stop();
+            Logger.Current.WriteLine();
+            Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch.Elapsed);
+        }
+
+        private static void StartNewThread(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
+        {
+            Action action = () => Worker(spline, chart, threadPriority);
+            ThreadStart threadStart = new ThreadStart(action);
+
+
+
+            Thread workThread = new Thread(threadStart);
+            workThread.Priority = threadPriority;
+            workThread.Start();
+        }
+
+        private static void Worker(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
+        {
+            GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+            GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+            ThreadTimeStopwatch threadTimeStopwatch = new ThreadTimeStopwatch();
+            threadTimeStopwatch.Start();
+
+            try
+            {
+                checkSplines(spline, chart);
+
+                threadTimeStopwatch.Stop();
+
+                WriteResultSummary(spline, threadPriority, threadTimeStopwatch.Elapsed);
+            }
+            finally
+            {
+                GlobalValues.WaitForSingleObject();
+                GlobalValues.SevEvent();
+            }
+
+        }
+
+        private static void WriteResultSummary(GlobalValues.SplineBox spline, ThreadPriority threadPriority, TimeSpan elapsed)
+        {
+            Logger.Current.WriteLine(string.Empty);
+
+            string summary = string.Format("Сплайн степени{0}; приоритет: {1}; время выполнения: {2} ", spline.POWER, threadPriority, elapsed);
+            Logger.Current.WriteLine(summary);
         }
     }
 }

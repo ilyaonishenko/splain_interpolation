@@ -10,7 +10,11 @@ namespace WindowsFormsApplication7
 {
     static class GlobalValues
     {
-        public static bool LogToFile { get; set; }
+        public static bool LogToFile { get; set; } //true: создает файл "log.txt" в папке с программой
+
+        public static long Begin { get; set; } //начало диапазона
+
+        public static long End { get; set; }
         //массив значений приоритетов потоков в C#
         public static ThreadPriority[] ThreadPriorities = { ThreadPriority.Lowest, ThreadPriority.BelowNormal, ThreadPriority.Normal, ThreadPriority.AboveNormal, ThreadPriority.Highest };
 
@@ -25,8 +29,13 @@ namespace WindowsFormsApplication7
         // Массивы для хранения координат опорных точек
         public static double[] X = null, Y = null;
 
+        public static List<double> xlist;
+        public static List<double> ylist;
+
         // Количество опорных точек
         public static int SIZE = 0;
+
+        public static object LockObject = new object();
 
         public static void WaitForSingleObject()
         {
