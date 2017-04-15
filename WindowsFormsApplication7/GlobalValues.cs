@@ -35,6 +35,8 @@ namespace WindowsFormsApplication7
         // Количество опорных точек
         public static int SIZE = 0;
 
+        public static bool isRunning {get; set;}
+
         public static object LockObject = new object();
 
         public static void WaitForSingleObject()
@@ -66,11 +68,13 @@ namespace WindowsFormsApplication7
             public int POWER = 0;
             public List<double> listX;
             public List<double> listY;
+            public Dictionary<double, double> dict;
             public SplineBox(int power)
             {
                 POWER = power;
                 listX = new List<double>();
                 listY = new List<double>();
+                dict = new Dictionary<double, double>();
             }
         }
     }

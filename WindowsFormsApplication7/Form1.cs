@@ -10,7 +10,9 @@ using System.Windows.Forms;
 using System.IO;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using MathNet.Numerics.Interpolation;
 
 namespace WindowsFormsApplication7
 {
@@ -115,6 +117,9 @@ namespace WindowsFormsApplication7
                 chart2.Series["real"].Points.AddXY(GlobalValues.X[i], GlobalValues.Y[i]);
                 chart3.Series["real"].Points.AddXY(GlobalValues.X[i], GlobalValues.Y[i]);
             }
+            chart1.Series["real"].MarkerStyle = MarkerStyle.Circle;
+            chart2.Series["real"].MarkerStyle = MarkerStyle.Circle;
+            chart3.Series["real"].MarkerStyle = MarkerStyle.Circle;
             chart1.Series["real"].ChartType = SeriesChartType.Line;
             chart2.Series["real"].ChartType = SeriesChartType.Line;
             chart3.Series["real"].ChartType = SeriesChartType.Line;
@@ -181,14 +186,14 @@ namespace WindowsFormsApplication7
 
         }
 
-        private void cubicInterpolation(GlobalValues.SplineBox spline, Chart chart)
+        /*private void cubicInterpolation(GlobalValues.SplineBox spline, Chart chart)
         {
             CubicSpline cSpline = new CubicSpline();
             cSpline.BuildSpline(GlobalValues.X, GlobalValues.Y, GlobalValues.X.Length);
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
-             * */
+             * 
             for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
@@ -199,16 +204,16 @@ namespace WindowsFormsApplication7
                 chart.Series["interpolated3"].Points.AddXY(spline.listX[i], spline.listY[i]);
             }
             chart.Series["interpolated3"].ChartType = SeriesChartType.Line;
-        }
+        }*/
 
-        private void qInterpolation(GlobalValues.SplineBox spline, Chart chart)
+        /*private void qInterpolation(GlobalValues.SplineBox spline, Chart chart)
         {
             QSpline qSpline = new QSpline();
             qSpline.BuildSpline(GlobalValues.X, GlobalValues.Y, GlobalValues.X.Length);
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
-             * */
+             * 
             for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
@@ -219,7 +224,7 @@ namespace WindowsFormsApplication7
                 chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
             }
             chart.Series["interpolated4"].ChartType = SeriesChartType.Line;
-        }
+        }*/
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -241,11 +246,8 @@ namespace WindowsFormsApplication7
             this.realChart();
             string paramsLog = string.Format("Начало работы");
             Logger.Current.WriteLine(paramsLog);
+            cycleCount = 0;
             StartThreads();
-
-            drawChart(spline1, chart1);
-            drawChart(spline2, chart2);
-            drawChart(spline3, chart3);
             /*
             this.checkSplines(spline1,chart1);
             this.checkSplines(spline2,chart2);
@@ -253,61 +255,132 @@ namespace WindowsFormsApplication7
              * */
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private static void checkSplines(GlobalValues.SplineBox spline, Chart chart)
         {
+            spline.dict = new Dictionary<double, double>();
             GlobalValues.xlist = GlobalValues.X.ToList<double>();
             GlobalValues.ylist = GlobalValues.Y.ToList<double>();
-            Thread.Sleep(5);
 
+            double step = 0.3;
+
+            if(spline.POWER == 1)
+            {
+                LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
+                splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
+                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                {
+                    // spline.listX.Add(i);
+                    spline.dict.Add(i, splineInterpol.Interpolate(i));
+                    //spline.listY.Add(splineInterpol.Interpolate(i));
+                }
+            } else if(spline.POWER == 2)
+            {
+                QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
+                quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
+                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                {
+                    //spline.listX.Add(i);
+                    //spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
+                    spline.dict.Add(i, quadraticSplineInterpol.Interpolate(i));
+                }
+            } 
+            else if(spline.POWER > 2 && spline.POWER<5)
+            {
+                CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
+                cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
+                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                {
+                    //spline.listX.Add(i);
+                    //spline.listY.Add(cubicSplineInterpol.Interpolate(i));
+                    spline.dict.Add(i, cubicSplineInterpol.Interpolate(i));
+                }
+            }
+            else if (spline.POWER >5)
+            {
+                BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(GlobalValues.X, GlobalValues.Y);
+                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                {
+                    spline.dict.Add(i, nevilleInterpol.Interpolate(i));
+                }
+            }
+            /*
             switch(spline.POWER)
             {
                 case 1:
                     LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
                     splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
+                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i+=step)
                     {
-                        spline.listX.Add(i);
-                        spline.listY.Add(splineInterpol.Interpolate(i));
+                       // spline.listX.Add(i);
+                        spline.dict.Add(i, splineInterpol.Interpolate(i));
+                        //spline.listY.Add(splineInterpol.Interpolate(i));
                     }
                     break;
                 case 2:
                     //MessageBox.Show("do not work for now");
                     QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
                     quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for(int i = Convert.ToInt32(GlobalValues.X[0]); i< GlobalValues.X[GlobalValues.X.Length-1]; i++)
+                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
                     {
-                        spline.listX.Add(i);
-                        spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
+                        //spline.listX.Add(i);
+                        //spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
+                        spline.dict.Add(i, quadraticSplineInterpol.Interpolate(i));
                     }
                     break;
                 case 3:
                     CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
                     cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
+                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
                     {
-                        spline.listX.Add(i);
-                        spline.listY.Add(cubicSplineInterpol.Interpolate(i));
+                        //spline.listX.Add(i);
+                        //spline.listY.Add(cubicSplineInterpol.Interpolate(i));
+                        spline.dict.Add(i, cubicSplineInterpol.Interpolate(i));
                     }
                     break;
                 default:
                     CubicSplineInterpolation cubicSplineInterpol1 = new CubicSplineInterpolation();
+                    QuadraticSpline quadraticSplineInterpol1 = new QuadraticSpline();
+                    //MathNet.Numerics.Interpolation.NevillePolynomialInterpolation
+                    BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(GlobalValues.X, GlobalValues.Y);
+                    NevillePolynomialInterpolation logLinearInterpol = new NevillePolynomialInterpolation(GlobalValues.X, GlobalValues.Y);
                     cubicSplineInterpol1.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
+                    quadraticSplineInterpol1.Init(GlobalValues.xlist, GlobalValues.ylist);
+                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
                     {
-                        spline.listX.Add(i);
-                        spline.listY.Add(cubicSplineInterpol1.Interpolate(i));
+                        //spline.listX.Add(i);
+                        //spline.listY.Add(cubicSplineInterpol1.Interpolate(i));
+                       // if (GlobalValues.xlist.Contains(i)&&spline.POWER%2!=0)
+
+                        ///if (spline.POWER % 2 != 0)
+                        //    spline.dict.Add(i, cubicSplineInterpol1.Interpolate(i + spline.POWER * 1.5));
+                        //else spline.dict.Add(i, quadraticSplineInterpol1.Interpolate(i + spline.POWER * 1.5));
+
+                        ///spline.dict.Add(i, nevilleInterpol.Interpolate(i));
+                        //spline.dict.Add(i, logLinearInterpol.Interpolate(i));
+                        //else if (GlobalValues.xlist.Contains(i) && spline.POWER%2==0)
+                         //   spline.dict.Add(i, quadraticSplineInterpol1.Interpolate(i+spline.POWER*1.5));
                     }
                     break;
-            }
+            }*/
         }
-
         private void drawChart(GlobalValues.SplineBox spline, Chart chart)
         {
-            for (int i = 0; i < spline.listX.Count; i++)
-            {
-                chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
+            //List<double> ll = spline.dict.Keys.ToList();
+            //Console.WriteLine(spline.dict);
+            //ll.Sort();
+            foreach(var key in spline.dict.Keys){
+                chart.Series["interpolated4"].Points.AddXY(key, spline.dict[key]);
             }
+            chart.Series["interpolated4"].MarkerStyle = MarkerStyle.Cross;
             chart.Series["interpolated4"].ChartType = SeriesChartType.Spline;
+            spline.dict = null;
+            /*for (int i = 0; i < ll.Count; i++)
+            {
+                //chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
+                chart.Series["interpolated4"].Points.AddXY(i, spline.dict[i]);
+            }
+            chart.Series["interpolated4"].ChartType = SeriesChartType.Spline;*/
         }
 
         private void label8_Click(object sender, EventArgs e)
@@ -319,6 +392,7 @@ namespace WindowsFormsApplication7
         {
             ProcessTimeStopwatch processTimeStopwatch = new ProcessTimeStopwatch();
             processTimeStopwatch.Start();
+            GlobalValues.isRunning = true;
             foreach(var spline1Priority in GlobalValues.ThreadPriorities)
             {
                 foreach(var spline2Priority in GlobalValues.ThreadPriorities)
@@ -346,13 +420,19 @@ namespace WindowsFormsApplication7
             processTimeStopwatch.Stop();
             Logger.Current.WriteLine();
             Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch.Elapsed);
+            Console.WriteLine(processTimeStopwatch.Elapsed);
+            GlobalValues.isRunning = false;
+            drawChart(spline1, chart1);
+            drawChart(spline2, chart2);
+            drawChart(spline3, chart3);
+
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private static void StartNewThread(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
             Action action = () => Worker(spline, chart, threadPriority);
             ThreadStart threadStart = new ThreadStart(action);
-
 
 
             Thread workThread = new Thread(threadStart);
@@ -383,11 +463,12 @@ namespace WindowsFormsApplication7
 
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private static void WriteResultSummary(GlobalValues.SplineBox spline, ThreadPriority threadPriority, TimeSpan elapsed)
         {
             Logger.Current.WriteLine(string.Empty);
 
-            string summary = string.Format("Сплайн степени{0}; приоритет: {1}; время выполнения: {2} ", spline.POWER, threadPriority, elapsed);
+            string summary = string.Format("Сплайн степени {0}; приоритет: {1}; время выполнения: {2} ", spline.POWER, threadPriority, elapsed);
             Logger.Current.WriteLine(summary);
         }
     }

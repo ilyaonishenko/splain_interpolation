@@ -16,3 +16,6 @@
 \\Mac\Home\Desktop\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\WindowsFormsApplication7.exe
 \\Mac\Home\Desktop\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\WindowsFormsApplication7.pdb
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\obj\Debug\WindowsFormsApplication7.csprojResolveAssemblyReference.cache
+\\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\MathNet.Numerics.dll
+\\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\MathNet.Numerics.xml
+\\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\alglibnet2.dll
