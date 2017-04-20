@@ -16,7 +16,8 @@ using MathNet.Numerics.Interpolation;
 
 namespace WindowsFormsApplication7
 {
-    public partial class Form1 : Form
+
+    public unsafe partial class Form1 : Form
     {
         // Массив для хранения коэффициентов для уравнений сплайна
         double[,] coeffs;
@@ -29,11 +30,70 @@ namespace WindowsFormsApplication7
 
         private static int cycleCount = 0;
 
+        int i_global = 0;
+
         StreamReader reader;
 
         GlobalValues.SplineBox spline1;
         GlobalValues.SplineBox spline2;
         GlobalValues.SplineBox spline3;
+
+        [DllImport("Kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private unsafe static extern uint CreateThread(
+            ref SECURITY_ATTRIBUTES lpThreadAttributes,
+                uint dwStackSize,
+                ThreadStart lpStartAddress,
+                uint lpParameter,
+                uint dwCreationFlags,
+                out uint lpThreadId);
+
+        public struct SECURITY_ATTRIBUTES
+        {
+            public ulong nLength; //аналог DWORD для С# - ulong
+            public IntPtr lpSecurityDescriptor; //аналог LPVOID для C# - IntPtr
+            public bool bInheritHandle; //смогут ли дочерние потоки наследовать описатель этого объекта
+        }
+
+        [DllImport("kernel32.dll")]
+        static extern int ResumeThread(IntPtr hThread);
+
+
+        /*public delegate void Del();
+
+        public const uint dw_milliSec_infinity = 0xFFFFFFFF;
+        //Динамически подключаемая библиотека — это файл, содержащий коллекцию модулей, которые могут использоваться любым количеством различных
+        [DllImport("Kernel32.dll")]//предоставляет приложениям многие базовые API Win32: управление памятью, операции ввода-вывода, создание процессов и потоков и функции синхронизации...
+        public static extern uint CreateThread(
+            ref SECURITY_ATTRIBUTES lpThreadAttributes, //Указатель на структуру SECURITY_ATTRIBUTES, которая обуславливает, может ли возвращенный дескриптор быть унаследован дочерними процессами. Если lpThreadAttributes является значением ПУСТО (NULL), дескриптор не может быть унаследован.
+            uint dwStackSize,//Начальный размер стека, в байтах. Система округляет это значение до самой близкой страницы памяти. Если это значение нулевое, новый поток использует по умолчанию размер стека исполняемой программы. 
+            Del lpStartAddress,//Указатель на определяемую программой функцию типа LPTHREAD_START_ROUTINE, код которой исполняется потоком и обозначает начальный адрес потока.
+            //Делегат — это тип, который инкапсулирует метод, т. е. его действие схоже с указателем функции в C и C++. 
+            uint lpParameter,//Указатель на переменную, которая передается в поток.
+            uint dwCreationFlags,//Флажки, которые управляют созданием потока. Если установлен флаг CREATE_SUSPENDED, создается поток в состоянии ожидания и не запускается до тех пор, пока не будет вызвана функция ResumeThread. 
+            out uint lpThreadId);//Указатель на переменную, которая принимает идентификатор потока.
+
+        [DllImport("Kernel32.dll")]
+        public static extern int CloseHandle(uint hObject); //закрывает дескриптор открытого объекта
+        // extern означает, что метод реализуется вне кода C#
+        [DllImport("Kernel32.dll")]
+        public static extern uint WaitForSingleObject(uint hHandle, uint dwMilliseconds);
+        //позволяют потоку в любой момент приостановиться и ждать освобождения какого-либо объекта ядра. 
+        // hObject идентифицирует объект ядра, поддерживающий состояния «свободен-занят» 
+        //dwMilliseconds - сколько времени (в миллисекундах) поток готов ждать освобождения объекта. 
+
+
+        [DllImport("kernel32.dll")]
+        static extern uint GetCurrentThreadId();//Получает идентификатор текущего потока
+
+        public struct SECURITY_ATTRIBUTES
+        {
+            public ulong nLength; //аналог DWORD для С# - ulong
+            public IntPtr lpSecurityDescriptor; //аналог LPVOID для C# - IntPtr
+            public bool bInheritHandle; //смогут ли дочерние потоки наследовать описатель этого объекта
+        }*/
+
+        [DllImport("kernel32.dll")]
+        static extern uint SuspendThread(IntPtr hThread);
 
         public Form1()
         {
@@ -41,6 +101,11 @@ namespace WindowsFormsApplication7
             //button3.Enabled = false;
             button4.Enabled = false;
             GlobalValues.LogToFile = true;
+            button5.Enabled = false;
+            label10.Visible = false;
+            label11.Visible = false;
+            label12.Visible = false;
+            label13.Visible = false;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -181,6 +246,11 @@ namespace WindowsFormsApplication7
 
         }
 
+        private void goWork()
+        {
+            Console.WriteLine("writing in console");
+        }
+
         private void chart1_Click(object sender, EventArgs e)
         {
 
@@ -247,7 +317,13 @@ namespace WindowsFormsApplication7
             string paramsLog = string.Format("Начало работы");
             Logger.Current.WriteLine(paramsLog);
             cycleCount = 0;
-            StartThreads();
+            if(checkBox1.Checked == false)
+                StartThreads();
+            else
+            {
+                label10.Visible = true;
+                label10.Text = "Нажмите кнопку \"Следующий шаг\"";
+            }
             /*
             this.checkSplines(spline1,chart1);
             this.checkSplines(spline2,chart2);
@@ -266,6 +342,7 @@ namespace WindowsFormsApplication7
 
             if(spline.POWER == 1)
             {
+                spline.dict = new Dictionary<double, double>();
                 LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
                 splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                 for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
@@ -276,6 +353,8 @@ namespace WindowsFormsApplication7
                 }
             } else if(spline.POWER == 2)
             {
+                spline.dict = new Dictionary<double, double>();
+
                 QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
                 quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                 for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
@@ -287,6 +366,8 @@ namespace WindowsFormsApplication7
             } 
             else if(spline.POWER > 2 && spline.POWER<5)
             {
+                spline.dict = new Dictionary<double, double>();
+
                 CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
                 cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
                 for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
@@ -298,6 +379,8 @@ namespace WindowsFormsApplication7
             }
             else if (spline.POWER >5)
             {
+                spline.dict = new Dictionary<double, double>();
+
                 BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(GlobalValues.X, GlobalValues.Y);
                 for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
                 {
@@ -369,12 +452,24 @@ namespace WindowsFormsApplication7
             //List<double> ll = spline.dict.Keys.ToList();
             //Console.WriteLine(spline.dict);
             //ll.Sort();
-            foreach(var key in spline.dict.Keys){
-                chart.Series["interpolated4"].Points.AddXY(key, spline.dict[key]);
+            try
+            {
+                foreach (var key in spline.dict.Keys)
+                {
+                    chart.Series["interpolated4"].Points.AddXY(key, spline.dict[key]);
+                }
+            }
+            catch (KeyNotFoundException e)
+            {
+                MessageBox.Show("Key not found exception. We will skip this chart");
+            }
+            catch (InvalidOperationException e)
+            {
+                MessageBox.Show("Invalid operation exception. We will skip this chart");
             }
             chart.Series["interpolated4"].MarkerStyle = MarkerStyle.Cross;
             chart.Series["interpolated4"].ChartType = SeriesChartType.Spline;
-            spline.dict = null;
+            spline.dict = new Dictionary<double,double>();
             /*for (int i = 0; i < ll.Count; i++)
             {
                 //chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
@@ -393,11 +488,11 @@ namespace WindowsFormsApplication7
             ProcessTimeStopwatch processTimeStopwatch = new ProcessTimeStopwatch();
             processTimeStopwatch.Start();
             GlobalValues.isRunning = true;
-            foreach(var spline1Priority in GlobalValues.ThreadPriorities)
+            foreach (var spline1Priority in GlobalValues.ThreadPriorities)
             {
-                foreach(var spline2Priority in GlobalValues.ThreadPriorities)
+                foreach (var spline2Priority in GlobalValues.ThreadPriorities)
                 {
-                    foreach(var spline3Priority in GlobalValues.ThreadPriorities)
+                    foreach (var spline3Priority in GlobalValues.ThreadPriorities)
                     {
                         GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
                         try
@@ -428,17 +523,24 @@ namespace WindowsFormsApplication7
 
         }
 
+        [STAThread]
         [MethodImpl(MethodImplOptions.Synchronized)]
         private static void StartNewThread(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
             Action action = () => Worker(spline, chart, threadPriority);
             ThreadStart threadStart = new ThreadStart(action);
+            IntPtr h1Handle = new IntPtr();
+            uint dwThread;
+            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
+            h1Handle = (IntPtr) CreateThread(ref secAttr, 0, threadStart, 0, SuspendThread(h1Handle), out dwThread);
 
 
-            Thread workThread = new Thread(threadStart);
-            workThread.Priority = threadPriority;
-            workThread.Start();
+            ResumeThread(h1Handle);
+            //Thread workThread = new Thread(threadStart);
+            //workThread.Priority = threadPriority;
+            //workThread.Start();
         }
+
 
         private static void Worker(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
@@ -470,6 +572,90 @@ namespace WindowsFormsApplication7
 
             string summary = string.Format("Сплайн степени {0}; приоритет: {1}; время выполнения: {2} ", spline.POWER, threadPriority, elapsed);
             Logger.Current.WriteLine(summary);
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked == true)
+                button5.Enabled = true;
+            if (checkBox1.Checked == false)
+                button5.Enabled = false;
+        }
+
+
+        int j_global = 0;
+        int K_global = 0;
+        ProcessTimeStopwatch processTimeStopwatch_spec = new ProcessTimeStopwatch();
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            if (GlobalValues.isRunning == false)
+            {
+                
+                processTimeStopwatch_spec.Start();
+                GlobalValues.isRunning = true;
+            }
+
+            stepRunThreads(i_global, j_global, K_global);
+
+            if (K_global < GlobalValues.ThreadPriorities.Length-1)
+            {
+                K_global++;
+            }
+            else if (j_global < GlobalValues.ThreadPriorities.Length-1)
+            {
+                j_global++;
+                K_global = 0;
+            }
+            else if (i_global < GlobalValues.ThreadPriorities.Length-1)
+            {
+                i_global++;
+                K_global = 0;
+                j_global = 0;
+            }
+            else
+            {
+                processTimeStopwatch_spec.Stop();
+                Logger.Current.WriteLine();
+                Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch_spec.Elapsed);
+                Console.WriteLine(processTimeStopwatch_spec.Elapsed);
+                GlobalValues.isRunning = false;
+                label10.Text = "Итерирование завершено";
+            }
+            
+        }
+
+        private void stepRunThreads(int i, int j, int k)
+        {
+            label11.Visible = true;
+            label12.Visible = true;
+            label13.Visible = true;
+            label11.Text = i.ToString();
+            label12.Text = j.ToString();
+            label13.Text = k.ToString();
+            clearChart();
+            realChart();
+            try
+            {
+                GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                cycleCount++;
+                Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
+                StartNewThread(spline1, chart1, GlobalValues.ThreadPriorities[i]);
+                StartNewThread(spline2, chart2, GlobalValues.ThreadPriorities[j]);
+                StartNewThread(spline3, chart3, GlobalValues.ThreadPriorities[k]);
+            }
+            finally
+            {
+                GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+            }
+            Thread.Sleep(10);
+            GlobalValues.SevEvent();
+            drawChart(spline1, chart1);
+            drawChart(spline2, chart2);
+            drawChart(spline3, chart3);
+            label11.Text = ("Поток со сплайном степени " + spline1.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[i]);
+            label12.Text = ("Поток со сплайном степени " + spline2.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[j]);
+            label13.Text = ("Поток со сплайном степени " + spline3.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[k]);
         }
     }
 }
