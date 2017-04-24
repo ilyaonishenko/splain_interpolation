@@ -37,6 +37,9 @@ namespace WindowsFormsApplication7
         GlobalValues.SplineBox spline1;
         GlobalValues.SplineBox spline2;
         GlobalValues.SplineBox spline3;
+        private GlobalValues.SplineBox cSpline1;
+        private GlobalValues.SplineBox cSpline2;
+        private GlobalValues.SplineBox cSpline3;
 
         [DllImport("Kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private unsafe static extern uint CreateThread(
@@ -65,11 +68,11 @@ namespace WindowsFormsApplication7
         [DllImport("Kernel32.dll")]//предоставляет приложениям многие базовые API Win32: управление памятью, операции ввода-вывода, создание процессов и потоков и функции синхронизации...
         public static extern uint CreateThread(
             ref SECURITY_ATTRIBUTES lpThreadAttributes, //Указатель на структуру SECURITY_ATTRIBUTES, которая обуславливает, может ли возвращенный дескриптор быть унаследован дочерними процессами. Если lpThreadAttributes является значением ПУСТО (NULL), дескриптор не может быть унаследован.
-            uint dwStackSize,//Начальный размер стека, в байтах. Система округляет это значение до самой близкой страницы памяти. Если это значение нулевое, новый поток использует по умолчанию размер стека исполняемой программы. 
+            uint dwStackSize,//Начальный размер стека, в байтах. Система округляет это значение до самой близкой страницы памяти. Если это значение нулевое, новый поток использует по умолчанию размер стека исполняемой программы.
             Del lpStartAddress,//Указатель на определяемую программой функцию типа LPTHREAD_START_ROUTINE, код которой исполняется потоком и обозначает начальный адрес потока.
-            //Делегат — это тип, который инкапсулирует метод, т. е. его действие схоже с указателем функции в C и C++. 
+            //Делегат — это тип, который инкапсулирует метод, т. е. его действие схоже с указателем функции в C и C++.
             uint lpParameter,//Указатель на переменную, которая передается в поток.
-            uint dwCreationFlags,//Флажки, которые управляют созданием потока. Если установлен флаг CREATE_SUSPENDED, создается поток в состоянии ожидания и не запускается до тех пор, пока не будет вызвана функция ResumeThread. 
+            uint dwCreationFlags,//Флажки, которые управляют созданием потока. Если установлен флаг CREATE_SUSPENDED, создается поток в состоянии ожидания и не запускается до тех пор, пока не будет вызвана функция ResumeThread.
             out uint lpThreadId);//Указатель на переменную, которая принимает идентификатор потока.
 
         [DllImport("Kernel32.dll")]
@@ -77,9 +80,9 @@ namespace WindowsFormsApplication7
         // extern означает, что метод реализуется вне кода C#
         [DllImport("Kernel32.dll")]
         public static extern uint WaitForSingleObject(uint hHandle, uint dwMilliseconds);
-        //позволяют потоку в любой момент приостановиться и ждать освобождения какого-либо объекта ядра. 
-        // hObject идентифицирует объект ядра, поддерживающий состояния «свободен-занят» 
-        //dwMilliseconds - сколько времени (в миллисекундах) поток готов ждать освобождения объекта. 
+        //позволяют потоку в любой момент приостановиться и ждать освобождения какого-либо объекта ядра.
+        // hObject идентифицирует объект ядра, поддерживающий состояния «свободен-занят»
+        //dwMilliseconds - сколько времени (в миллисекундах) поток готов ждать освобождения объекта.
 
 
         [DllImport("kernel32.dll")]
@@ -95,6 +98,60 @@ namespace WindowsFormsApplication7
         [DllImport("kernel32.dll")]
         static extern uint SuspendThread(IntPtr hThread);
 
+        [DllImport("kernel32", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern UInt32 WaitForSingleObject(IAsyncResult hHandle, UInt32 dwMilliseconds);
+
+        [DllImport("kernel32", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool CloseHandle(IAsyncResult handle);
+
+        //Мьютексы
+        [DllImport("kernel32.dll")]
+        static extern IntPtr CreateMutex(IntPtr lpMutexAttributes, bool bInitialOwner, string lpName);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool ReleaseMutex(IntPtr hMutex);
+
+        //Семафоры
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr CreateSemaphore(
+            IntPtr lpSemaphoreAttributes,
+            int lInitialCount,
+            int lMaximumCount,
+            string lpName);
+
+        [DllImport("kernel32.dll")]
+        static extern bool ReleaseSemaphore(IntPtr hSemaphore, int lReleaseCount, IntPtr lpPreviousCount);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr OpenSemaphore(uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, string lpName);
+
+        //События
+        [DllImport("kernel32.dll")]
+        static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string lpName);
+
+        [DllImport("kernel32.dll")]
+        static extern bool SetEvent(IntPtr hEvent);
+
+
+        [DllImport("kernel32.dll")]
+        static extern bool ResetEvent(IntPtr hEvent);
+
+        [DllImport("kernel32.dll", EntryPoint = "WaitForMultipleObjects", SetLastError = true)]
+        static extern int WaitForMultipleObjects(UInt32 nCount, IntPtr[] lpHandles, Boolean fWaitAll, UInt32 dwMilliseconds);
+
+
+        static IntPtr _semaphore;
+        static IntPtr _mutex;
+        static IntPtr _event;
+        private static IntPtr c1;
+        private static  IntPtr c2;
+
         public Form1()
         {
             InitializeComponent();
@@ -106,6 +163,16 @@ namespace WindowsFormsApplication7
             label11.Visible = false;
             label12.Visible = false;
             label13.Visible = false;
+            _semaphore = CreateSemaphore((IntPtr)null, 1, 1, null);
+            _mutex = CreateMutex((IntPtr)null, false, null);
+            _event = CreateEvent((IntPtr)null, true, false, null);
+            SetEvent(_event);
+            label14.Visible = false;
+            chart4.Visible = false;
+            Form2 f2 = new Form2();
+            f2.ShowDialog();
+            c1 = IntPtr.Zero;
+            c2 = new IntPtr(1);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -113,6 +180,25 @@ namespace WindowsFormsApplication7
             AllocConsole();
             GlobalValues.xlist = new List<double>();
             GlobalValues.ylist = new List<double>();
+            /*switch (GlobalValues.SyncWay)
+            {
+                case Sync.Semaphore:
+                {
+                    label14.Text = "Способ синхронизации: семафоры";
+                    break;
+                }
+                case Sync.Event:
+                {
+                    label14.Text = "Способ синхронизации: события";
+                    break;
+                }
+                case Sync.Mutex:
+                {
+                    label14.Text = "Способ синхронизации: мьютексы";
+                    break;
+                }
+            }*/
+
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -263,7 +349,7 @@ namespace WindowsFormsApplication7
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
-             * 
+             *
             for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
@@ -283,7 +369,7 @@ namespace WindowsFormsApplication7
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
-             * 
+             *
             for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
@@ -363,7 +449,7 @@ namespace WindowsFormsApplication7
                     //spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
                     spline.dict.Add(i, quadraticSplineInterpol.Interpolate(i));
                 }
-            } 
+            }
             else if(spline.POWER > 2 && spline.POWER<5)
             {
                 spline.dict = new Dictionary<double, double>();
@@ -377,7 +463,7 @@ namespace WindowsFormsApplication7
                     spline.dict.Add(i, cubicSplineInterpol.Interpolate(i));
                 }
             }
-            else if (spline.POWER >5)
+            else if (spline.POWER >=5)
             {
                 spline.dict = new Dictionary<double, double>();
 
@@ -469,7 +555,7 @@ namespace WindowsFormsApplication7
             }
             chart.Series["interpolated4"].MarkerStyle = MarkerStyle.Cross;
             chart.Series["interpolated4"].ChartType = SeriesChartType.Spline;
-            spline.dict = new Dictionary<double,double>();
+            //spline.dict = new Dictionary<double,double>();
             /*for (int i = 0; i < ll.Count; i++)
             {
                 //chart.Series["interpolated4"].Points.AddXY(spline.listX[i], spline.listY[i]);
@@ -494,7 +580,7 @@ namespace WindowsFormsApplication7
                 {
                     foreach (var spline3Priority in GlobalValues.ThreadPriorities)
                     {
-                        GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                        //GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
                         try
                         {
                             cycleCount++;
@@ -503,9 +589,13 @@ namespace WindowsFormsApplication7
                             StartNewThread(spline2, chart2, spline2Priority);
                             StartNewThread(spline3, chart3, spline3Priority);
                         }
+                        catch (NullReferenceException e)
+                        {
+                            MessageBox.Show("NRE occures. Please restart the program");
+                        }
                         finally
                         {
-                            GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                          //  GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
                         }
                         Thread.Sleep(10);
                         GlobalValues.SevEvent();
@@ -539,30 +629,89 @@ namespace WindowsFormsApplication7
             //Thread workThread = new Thread(threadStart);
             //workThread.Priority = threadPriority;
             //workThread.Start();
+            //WaitForSingleObject(h1Handle, 0xFFFFFFFF);
+            //CloseHandle(h1Handle);
+        }
+
+        static IntPtr getSemaphoreCount(IntPtr sem, int maxCOunt)
+        {
+            IntPtr currentValue = IntPtr.Zero;
+            IntPtr[] arr = new IntPtr[]{sem};
+            if (ReleaseSemaphore(sem, 1, currentValue))
+            {
+                WaitForMultipleObjects(1, arr, true, 1);
+            }
+            return currentValue;
         }
 
 
         private static void Worker(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
-            GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
-            GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
             ThreadTimeStopwatch threadTimeStopwatch = new ThreadTimeStopwatch();
             threadTimeStopwatch.Start();
+            switch (GlobalValues.SyncWay)
+            {
+                case Sync.Semaphore:
+                {
+                    c1 = getSemaphoreCount(_semaphore, 1);
+                    Thread.Sleep(10);
+                    WaitForSingleObject(_semaphore, 0xFFFFFFFF);
+                    Thread.Sleep(10);
+                    c2 = getSemaphoreCount(_semaphore, 1);
+                    MakeChanges(spline, chart, threadPriority, threadTimeStopwatch);
+                    ReleaseSemaphore(_semaphore, 1, (IntPtr)null);
+                    break;
+                }
+                case Sync.Mutex:
+                {
+                    WaitForSingleObject(_mutex, 0xFFFFFFFF);
+                    MakeChanges(spline, chart, threadPriority, threadTimeStopwatch);
+                    ReleaseMutex(_mutex);
+                    break;
+                }
+                case Sync.Event:
+                {
 
+                    WaitForSingleObject(_event, 0xFFFFFFFF);
+                    ResetEvent(_event);
+                    MakeChanges(spline, chart, threadPriority, threadTimeStopwatch);
+                    SetEvent(_event);
+                    break;
+                }
+                default:
+                {
+                    GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                    GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                    break;
+                }
+
+            }
+
+            log();
+            /*
             try
             {
-                checkSplines(spline, chart);
-
-                threadTimeStopwatch.Stop();
-
-                WriteResultSummary(spline, threadPriority, threadTimeStopwatch.Elapsed);
+                makeChanges(spline, chart, threadPriority, threadTimeStopwatch);
             }
             finally
             {
                 GlobalValues.WaitForSingleObject();
                 GlobalValues.SevEvent();
-            }
+            }*/
+            Console.WriteLine(c1);
+            Console.WriteLine(c2);
+        }
 
+        
+
+        private static void MakeChanges(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority,
+            ThreadTimeStopwatch threadTimeStopwatch)
+        {
+            checkSplines(spline, chart);
+
+            threadTimeStopwatch.Stop();
+
+            WriteResultSummary(spline, threadPriority, threadTimeStopwatch.Elapsed);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -580,6 +729,15 @@ namespace WindowsFormsApplication7
                 button5.Enabled = true;
             if (checkBox1.Checked == false)
                 button5.Enabled = false;
+
+            // Even the hills Have Eyes
+            cSpline1 = new GlobalValues.SplineBox(spline1.POWER);
+            cSpline2 = new GlobalValues.SplineBox(spline2.POWER);
+            cSpline3 = new GlobalValues.SplineBox(spline3.POWER);
+            checkSplines(cSpline1, chart4);
+            checkSplines(cSpline2, chart4);
+            checkSplines(cSpline3, chart4);
+            // Even the hills Have Eyes
         }
 
 
@@ -587,11 +745,16 @@ namespace WindowsFormsApplication7
         int K_global = 0;
         ProcessTimeStopwatch processTimeStopwatch_spec = new ProcessTimeStopwatch();
 
+        private static void log()
+        {
+            c2 = new IntPtr(1);
+        }
+
         private void button5_Click(object sender, EventArgs e)
         {
             if (GlobalValues.isRunning == false)
             {
-                
+
                 processTimeStopwatch_spec.Start();
                 GlobalValues.isRunning = true;
             }
@@ -622,7 +785,7 @@ namespace WindowsFormsApplication7
                 GlobalValues.isRunning = false;
                 label10.Text = "Итерирование завершено";
             }
-            
+
         }
 
         private void stepRunThreads(int i, int j, int k)
@@ -640,9 +803,11 @@ namespace WindowsFormsApplication7
                 GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
                 cycleCount++;
                 Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
-                StartNewThread(spline1, chart1, GlobalValues.ThreadPriorities[i]);
-                StartNewThread(spline2, chart2, GlobalValues.ThreadPriorities[j]);
-                StartNewThread(spline3, chart3, GlobalValues.ThreadPriorities[k]);
+
+                StartNewThread(spline1, chart4, GlobalValues.ThreadPriorities[i]);
+                StartNewThread(spline2, chart4, GlobalValues.ThreadPriorities[j]);
+                StartNewThread(spline3, chart4, GlobalValues.ThreadPriorities[k]);
+
             }
             finally
             {
@@ -650,12 +815,36 @@ namespace WindowsFormsApplication7
             }
             Thread.Sleep(10);
             GlobalValues.SevEvent();
-            drawChart(spline1, chart1);
-            drawChart(spline2, chart2);
-            drawChart(spline3, chart3);
+            drawChart(cSpline1, chart1);
+            drawChart(cSpline2, chart2);
+            drawChart(cSpline3, chart3);
             label11.Text = ("Поток со сплайном степени " + spline1.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[i]);
             label12.Text = ("Поток со сплайном степени " + spline2.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[j]);
             label13.Text = ("Поток со сплайном степени " + spline3.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[k]);
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            Form2 f2 = new Form2();
+            f2.ShowDialog();
+            /*switch (GlobalValues.SyncWay)
+            {
+                case Sync.Semaphore:
+                {
+                    label14.Text = "Способ синхронизации: семафоры";
+                    break;
+                }
+                case Sync.Event:
+                {
+                    label14.Text = "Способ синхронизации: события";
+                    break;
+                }
+                case Sync.Mutex:
+                {
+                    label14.Text = "Способ синхронизации: мьютексы";
+                    break;
+                }
+            }*/
         }
     }
 }

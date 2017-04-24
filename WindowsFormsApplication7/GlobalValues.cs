@@ -8,6 +8,7 @@ using System.Threading;
 
 namespace WindowsFormsApplication7
 {
+    public enum Sync { Mutex, Semaphore, Event}
     static class GlobalValues
     {
         public static bool LogToFile { get; set; } //true: создает файл "log.txt" в папке с программой
@@ -38,6 +39,8 @@ namespace WindowsFormsApplication7
         public static bool isRunning {get; set;}
 
         public static object LockObject = new object();
+
+        public static Sync SyncWay;
 
         public static void WaitForSingleObject()
         {

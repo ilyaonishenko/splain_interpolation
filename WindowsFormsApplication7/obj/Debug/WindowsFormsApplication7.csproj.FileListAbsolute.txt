@@ -19,3 +19,4 @@
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\MathNet.Numerics.dll
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\MathNet.Numerics.xml
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\bin\Debug\alglibnet2.dll
+\\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\WindowsFormsApplication7\obj\Debug\WindowsFormsApplication7.Form2.resources
