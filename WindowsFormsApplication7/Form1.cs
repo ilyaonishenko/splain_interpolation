@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -32,7 +33,7 @@ namespace WindowsFormsApplication7
 
         int i_global = 0;
 
-        private int N;
+        private double[] N;
 
         StreamReader reader;
 
@@ -215,12 +216,41 @@ namespace WindowsFormsApplication7
             uint nDefaultTimeOut,
             IntPtr lpSecurityAttributes);
 
+        [DllImport("kernel32.dll")]
+        static extern bool CreateProcess(string lpApplicationName,
+            string lpCommandLine,
+            IntPtr lpProcessAttributes,
+            IntPtr lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
+        }
+
 
         private static IntPtr _semaphore;
         private static IntPtr _mutex;
         private static IntPtr _event;
         private static IntPtr c1;
         private static  IntPtr c2;
+
+        private STARTUPINFO startupInfo;
+        private PROCESS_INFORMATION processInfo;
+
+        private static IntPtr lenPipe;
+        private static IntPtr arrayXPipe;
+        private static IntPtr arrayYPipe;
+        private static IntPtr syncWayPipe;
 
         public Form1()
         {
@@ -251,14 +281,13 @@ namespace WindowsFormsApplication7
             label3.Visible = false;
             label2.Visible = false;
             textBox2.Visible = false;
+            startupInfo = new STARTUPINFO();
+            processInfo = new PROCESS_INFORMATION();
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             AllocConsole();
-            Console.WriteLine("before init");
-            InitFromPipe();
-            Console.WriteLine("afterInit");
             Commons.xlist = new List<double>();
             Commons.ylist = new List<double>();
             /*switch (Commons.SyncWay)
@@ -286,35 +315,100 @@ namespace WindowsFormsApplication7
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool AllocConsole();
 
-        private void InitFromPipe()
+        private void ReadDataFromPipe()
         {
+            System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
+            ConnectNamedPipe(lenPipe, ref zz);
+            ConnectNamedPipe(arrayXPipe, ref zz);
+            ConnectNamedPipe(arrayYPipe, ref zz);
+            ConnectNamedPipe(syncWayPipe, ref zz);
+            uint q1 = 0;
+            N = new double[1];
+
+            ReadFile(lenPipe, N, 64, out q1, IntPtr.Zero);
+            Console.WriteLine(N[0]);
+            var n = (int)N[0];
+            Commons.SIZE = n;
+            Console.WriteLine("N is " + n);
+
+            var arrayX = new double[n];
+            var arrayY = new double[n];
+
+            ReadFile(arrayXPipe, arrayX, 64, out q1, IntPtr.Zero);
+            ReadFile(arrayYPipe, arrayY, 64, out q1, IntPtr.Zero);
+
+            ReadFile(syncWayPipe, N, 64, out q1, IntPtr.Zero);
+
+            //Array.Sort(arrayY);
+            Array.Sort(arrayX);
+            
+            var syncWay = N[0];
+            Commons.SyncWay = GetValue((int)syncWay);
+            Commons.X = arrayX;
+            Commons.Y = arrayY;
+            Console.WriteLine("ArrayX: "+arrayX.Length);
+            foreach (var dob in arrayX)
+            {
+                Console.Write(dob+" ");
+            }
+            Console.WriteLine("ArrayY: "+arrayY.Length);
+            foreach (var dob in arrayY)
+            {
+                Console.Write(dob + " ");
+            }
+            Console.WriteLine("SyncWay: "+Commons.SyncWay);
+        }
+
+        private void CreatePipe()
+        {
+
+            String path = "C:\\Users\\veryoldbarny\\Starter.exe";
+            lenPipe = CreateNamedPipe("\\\\.\\pipe\\LengthPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            arrayXPipe = CreateNamedPipe("\\\\.\\pipe\\ArrayXPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            arrayYPipe = CreateNamedPipe("\\\\.\\pipe\\ArrayYPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            syncWayPipe = CreateNamedPipe("\\\\.\\pipe\\SyncWayPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            //System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
+            CreateProcess(path, null, IntPtr.Zero,
+                IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
+            //ConnectNamedPipe(pipe1, ref zz);
+            //uint q1 = 0;
+            //N = new double[1];
+            //ReadFile(pipe1, N, 64, out q1, IntPtr.Zero);
+            //Console.WriteLine(N[0]);
+            //var n = (int)N[0];
+            //Console.WriteLine("N is " + n);
+            /*
             Console.WriteLine("Hello");
-            var pipe1 = CreateNamedPipe("\\\\.\\pipe\\MyPipe1", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
-            var pipe = CreateNamedPipe("\\\\.\\pipe\\MyPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            var pipe1 = CreateNamedPipe("C:\\Users\\veryoldbarny\\MyPipe1", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            var pipe = CreateNamedPipe("C:\\Users\\veryoldbarny\\MyPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
             //var file1 = CreateFile("\\\\.\\pipe\\MyPipe1", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
             //Console.WriteLine("Hello1");
             System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
             //Console.WriteLine("Hello2");
-            //ConnectNamedPipe(pipe1, ref zz);
-            //Console.WriteLine("Hello3");
+            ConnectNamedPipe(pipe1, ref zz);
+            Console.WriteLine("Hello3");
             uint q1 = 0;
+            N = new double[1];
             ReadFile(pipe1, N, 64, out q1, IntPtr.Zero);
+            Console.WriteLine(N[0]);
+            var n = (int)N[0];
             //var file = CreateFile("\\\\.\\pipe\\MyPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
             //ConnectNamedPipe(pipe, ref zz);
-            label4.Text = N.ToString();
+            //label4.Text = N.ToString();
+            Console.WriteLine("N is "+n);
             var arrays = new double[10];
-            var arrayX = new double[N];
-            var arrayY = new double[N];
+            var arrayX = new double[n];
+            var arrayY = new double[n];
             ReadFile(pipe, arrays, 64, out q1, IntPtr.Zero);
-            for (var i = 0; i < N; i++)
+            for (var i = 0; i < n; i++)
             {
                 arrayX[i] = arrays[i];
-                arrayY[i] = arrays[N + i];
+                arrayY[i] = arrays[n + i];
             }
-            var syncWay = arrays[2 * N];
+            var syncWay = arrays[2 * n];
             Commons.SyncWay = GetValue((int)syncWay);
             Commons.X = arrayX;
-            Commons.Y = arrayY;
+            Commons.Y = arrayY;*/
         }
 
         private static Sync GetValue(int syncWay)
@@ -334,6 +428,7 @@ namespace WindowsFormsApplication7
 
         public void ReadPoints()
         {
+            /*
             
             reader = new StreamReader("C:\\Users\\veryoldbarny\\input.txt");
 
@@ -385,6 +480,7 @@ namespace WindowsFormsApplication7
                     x_same = Commons.X[i];
                 }
             reader.Close();
+             */
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -982,6 +1078,16 @@ namespace WindowsFormsApplication7
                     break;
                 }
             }*/
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            CreatePipe();
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            ReadDataFromPipe();
         }
     }
 }

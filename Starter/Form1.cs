@@ -137,7 +137,7 @@ namespace Starter
 
         private int syncWay;
         private int N = 0;
-        private double[] arrays;
+        private double[][] arrays;
 
         private uint bytesWritten;
         private uint bytesWritten1;
@@ -167,7 +167,7 @@ namespace Starter
 
             arrays = gen.generate(N, 1, 3);
 
-            arrays[2*N] = syncWay;
+            //arrays[2*N] = syncWay;
 
             //label3.Text = arrays[2 * N].ToString();
 
@@ -180,18 +180,29 @@ namespace Starter
             //PIPE_READMODE_MESSAGE = 0x00000002
             //PIPE_WAIT = 0x00000000
             //PIPE_NOWAIT = 0x00000001
-            IntPtr file = CreateFile("\\\\.\\pipe\\MyPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
-            IntPtr file1 = CreateFile("\\\\.\\pipe\\MyPipe1", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero,
+            IntPtr lenFile = CreateFile("\\\\.\\pipe\\LengthPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
+            IntPtr arrayXFile = CreateFile("\\\\.\\pipe\\ArrayXPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero,
                 FileMode.OpenOrCreate, 0, IntPtr.Zero);
-            gen.SortArrays(syncWay);
-            WriteFile(file, arrays, 16, out bytesWritten, IntPtr.Zero);
-            WriteFile(file1,N, 16, out bytesWritten1, IntPtr.Zero);
+            IntPtr arrayYFile = CreateFile("\\\\.\\pipe\\ArrayYPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero,
+                FileMode.OpenOrCreate, 0, IntPtr.Zero);
+            IntPtr syncWayFile = CreateFile("\\\\.\\pipe\\SyncWayPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero,
+                FileMode.OpenOrCreate, 0, IntPtr.Zero);
+            //gen.SortArrays(syncWay);
+            WriteFile(lenFile,new double[] { N }, 64, out bytesWritten, IntPtr.Zero);
+            WriteFile(arrayXFile, arrays[0], 64, out bytesWritten1, IntPtr.Zero);
+            WriteFile(arrayYFile, arrays[1], 64, out bytesWritten1, IntPtr.Zero);
+            WriteFile(syncWayFile, new double[] { syncWay }, 64, out bytesWritten, IntPtr.Zero);
             // todo change location file
             //CreateProcessHelper.CreateProcess("C:\\Users\\veryoldbarny\\Documents\\WindowsFormsApplication7.exe", String.Empty);
-            String path = "C:\\Users\\veryoldbarny\\WindowsFormsApplication7.exe";
+            //String path = "C:\\Users\\veryoldbarny\\WindowsFormsApplication7.exe";
 
-            CreateProcess(path, null, IntPtr.Zero,
-                 IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
+            CloseHandle(lenFile);
+            CloseHandle(arrayXFile);
+            CloseHandle(arrayYFile);
+            CloseHandle(syncWayFile);
+
+            //CreateProcess(path, null, IntPtr.Zero,
+            //     IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
         }
 
         private void Form1_Load(object sender, EventArgs e)

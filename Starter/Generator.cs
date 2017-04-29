@@ -14,7 +14,7 @@ namespace Starter
         double[] arrax;
         int N;
 
-        public double[] generate(int n, int min, int max)
+        public double[][] generate(int n, int min, int max)
         {
             N = n;
             array = new double[n];
@@ -43,15 +43,15 @@ namespace Starter
                     array[i] = (double) Decimal.MinValue;
                 }
             }
-            double[] returnArray = new double[2*n+1];
+            /*double[] returnArray = new double[2*n+1];
 
             for (int i = 0; i < N; i++)
             {
                 returnArray[i] = arrax[i];
                 returnArray[N + i] = array[i];
-            }
+            }*/
 
-            return returnArray;
+            return new double[][]{arrax, array};
         }
 
 
