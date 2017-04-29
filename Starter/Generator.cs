@@ -14,7 +14,7 @@ namespace Starter
         double[] arrax;
         int N;
 
-        public double[][] generate(int n, int min, int max)
+        public void generate(int n, int min, int max)
         {
             N = n;
             array = new double[n];
@@ -43,23 +43,14 @@ namespace Starter
                     array[i] = (double) Decimal.MinValue;
                 }
             }
-            /*double[] returnArray = new double[2*n+1];
-
-            for (int i = 0; i < N; i++)
-            {
-                returnArray[i] = arrax[i];
-                returnArray[N + i] = array[i];
-            }*/
-
-            return new double[][]{arrax, array};
+            SortArrays();
         }
 
 
-        public void SortArrays(int sync)
+        public void SortArrays()
         {
             StreamWriter writer = new StreamWriter("C:\\Users\\veryoldbarny\\input.txt");
             writer.WriteLine(N);
-            writer.WriteLine(sync);
             for (int i = 0; i < N; i++)
             {
                 writer.WriteLine(arrax[i] + " " + array[i]);

@@ -132,6 +132,10 @@ namespace Starter
             [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
             IntPtr templateFile);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+
         private STARTUPINFO startupInfo;
         private PROCESS_INFORMATION processInfo;
 
@@ -145,9 +149,66 @@ namespace Starter
 
         public Form1()
         {
+            AllocConsole();
             InitializeComponent();
             startupInfo = new STARTUPINFO();
             processInfo= new PROCESS_INFORMATION();
+        }
+
+        private StreamReader reader;
+        private int SIZE;
+        private double[] X;
+        private double[] Y;
+
+        public void ReadPoints()
+        {
+            
+            
+            reader = new StreamReader("C:\\Users\\veryoldbarny\\input.txt");
+
+            //reader = new StreamReader("C:\\Users\\veryoldbarny\\Documents\\input.txt");
+            // Номер строки с первой ошибкой, если такая имеется
+
+            SIZE = Convert.ToInt32(reader.ReadLine());
+            X = new double[SIZE];
+            for (int i = 0; i < SIZE; i++) X[i] = 0.0;
+            Y = new double[SIZE];
+            for (int i = 0; i < SIZE; i++) Y[i] = 0.0;
+
+            // Проверка на корректность считанных точек
+            string line = "";
+            string[] points;
+
+            for (int i = 0; i < SIZE; i++)
+            {
+                line = reader.ReadLine();
+                points = line.Split();
+                X[i] = Convert.ToDouble(points[0]);
+                Y[i] = Convert.ToDouble(points[1]);
+            }
+
+            // Сортировка точек в порядке возрастания по x
+            double x_change = 0, y_change = 0;
+            for (int i = 0; i < SIZE - 1; i++)
+                for (int j = 0; j < SIZE - i - 1; j++)
+                    if (X[j] > X[j + 1])
+                    {
+                        x_change = X[j];
+                        X[j] = X[j + 1];
+                        X[j + 1] = x_change;
+                        y_change = Y[j];
+                        Y[j] = Y[j + 1];
+                        Y[j + 1] = y_change;
+                    }
+            reader.Close();
+            foreach (var dob in X)
+            {
+                Console.Write(dob+"   ");
+            }
+            foreach (var dob in Y)
+            {
+                Console.Write(dob + "   ");
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -165,7 +226,8 @@ namespace Starter
 
             Generator gen = new Generator();
 
-            arrays = gen.generate(N, 1, 3);
+            gen.generate(N, 1, 3);
+            ReadPoints();
 
             //arrays[2*N] = syncWay;
 
@@ -189,8 +251,8 @@ namespace Starter
                 FileMode.OpenOrCreate, 0, IntPtr.Zero);
             //gen.SortArrays(syncWay);
             WriteFile(lenFile,new double[] { N }, 64, out bytesWritten, IntPtr.Zero);
-            WriteFile(arrayXFile, arrays[0], 64, out bytesWritten1, IntPtr.Zero);
-            WriteFile(arrayYFile, arrays[1], 64, out bytesWritten1, IntPtr.Zero);
+            WriteFile(arrayXFile, X, 1024, out bytesWritten1, IntPtr.Zero);
+            WriteFile(arrayYFile, Y, 1024, out bytesWritten1, IntPtr.Zero);
             WriteFile(syncWayFile, new double[] { syncWay }, 64, out bytesWritten, IntPtr.Zero);
             // todo change location file
             //CreateProcessHelper.CreateProcess("C:\\Users\\veryoldbarny\\Documents\\WindowsFormsApplication7.exe", String.Empty);

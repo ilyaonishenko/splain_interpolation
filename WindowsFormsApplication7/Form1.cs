@@ -317,7 +317,7 @@ namespace WindowsFormsApplication7
 
         private void ReadDataFromPipe()
         {
-            System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
+            NativeOverlapped zz = new NativeOverlapped();
             ConnectNamedPipe(lenPipe, ref zz);
             ConnectNamedPipe(arrayXPipe, ref zz);
             ConnectNamedPipe(arrayYPipe, ref zz);
@@ -334,13 +334,10 @@ namespace WindowsFormsApplication7
             var arrayX = new double[n];
             var arrayY = new double[n];
 
-            ReadFile(arrayXPipe, arrayX, 64, out q1, IntPtr.Zero);
-            ReadFile(arrayYPipe, arrayY, 64, out q1, IntPtr.Zero);
+            ReadFile(arrayXPipe, arrayX, 1024, out q1, IntPtr.Zero);
+            ReadFile(arrayYPipe, arrayY, 1024, out q1, IntPtr.Zero);
 
             ReadFile(syncWayPipe, N, 64, out q1, IntPtr.Zero);
-
-            //Array.Sort(arrayY);
-            Array.Sort(arrayX);
             
             var syncWay = N[0];
             Commons.SyncWay = GetValue((int)syncWay);
@@ -349,13 +346,14 @@ namespace WindowsFormsApplication7
             Console.WriteLine("ArrayX: "+arrayX.Length);
             foreach (var dob in arrayX)
             {
-                Console.Write(dob+" ");
+                Console.Write(dob+"  ");
             }
             Console.WriteLine("ArrayY: "+arrayY.Length);
             foreach (var dob in arrayY)
             {
-                Console.Write(dob + " ");
+                Console.Write(dob + "  ");
             }
+            Console.WriteLine();
             Console.WriteLine("SyncWay: "+Commons.SyncWay);
         }
 
@@ -370,45 +368,6 @@ namespace WindowsFormsApplication7
             //System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
             CreateProcess(path, null, IntPtr.Zero,
                 IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
-            //ConnectNamedPipe(pipe1, ref zz);
-            //uint q1 = 0;
-            //N = new double[1];
-            //ReadFile(pipe1, N, 64, out q1, IntPtr.Zero);
-            //Console.WriteLine(N[0]);
-            //var n = (int)N[0];
-            //Console.WriteLine("N is " + n);
-            /*
-            Console.WriteLine("Hello");
-            var pipe1 = CreateNamedPipe("C:\\Users\\veryoldbarny\\MyPipe1", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
-            var pipe = CreateNamedPipe("C:\\Users\\veryoldbarny\\MyPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
-            //var file1 = CreateFile("\\\\.\\pipe\\MyPipe1", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
-            //Console.WriteLine("Hello1");
-            System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
-            //Console.WriteLine("Hello2");
-            ConnectNamedPipe(pipe1, ref zz);
-            Console.WriteLine("Hello3");
-            uint q1 = 0;
-            N = new double[1];
-            ReadFile(pipe1, N, 64, out q1, IntPtr.Zero);
-            Console.WriteLine(N[0]);
-            var n = (int)N[0];
-            //var file = CreateFile("\\\\.\\pipe\\MyPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
-            //ConnectNamedPipe(pipe, ref zz);
-            //label4.Text = N.ToString();
-            Console.WriteLine("N is "+n);
-            var arrays = new double[10];
-            var arrayX = new double[n];
-            var arrayY = new double[n];
-            ReadFile(pipe, arrays, 64, out q1, IntPtr.Zero);
-            for (var i = 0; i < n; i++)
-            {
-                arrayX[i] = arrays[i];
-                arrayY[i] = arrays[n + i];
-            }
-            var syncWay = arrays[2 * n];
-            Commons.SyncWay = GetValue((int)syncWay);
-            Commons.X = arrayX;
-            Commons.Y = arrayY;*/
         }
 
         private static Sync GetValue(int syncWay)
@@ -883,11 +842,11 @@ namespace WindowsFormsApplication7
             {
                 case Sync.Semaphore:
                 {
-                    c1 = getSemaphoreCount(_semaphore, 1);
+                    //c1 = getSemaphoreCount(_semaphore, 1);
                     Thread.Sleep(10);
                     WaitForSingleObject(_semaphore, 0xFFFFFFFF);
                     Thread.Sleep(10);
-                    c2 = getSemaphoreCount(_semaphore, 1);
+                    //c2 = getSemaphoreCount(_semaphore, 1);
                     MakeChanges(spline, chart, threadPriority, threadTimeStopwatch);
                     ReleaseSemaphore(_semaphore, 1, (IntPtr)null);
                     break;
