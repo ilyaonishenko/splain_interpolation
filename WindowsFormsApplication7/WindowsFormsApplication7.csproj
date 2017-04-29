@@ -88,7 +88,7 @@
       <DependentUpon>Form2.cs</DependentUpon>
     </Compile>
     <Compile Include="Generator.cs" />
-    <Compile Include="GlobalValues.cs" />
+    <Compile Include="Commons.cs" />
     <Compile Include="InterpolationMethod.cs" />
     <Compile Include="LinearSplineInterpolation.cs" />
     <Compile Include="additional\Number.cs" />

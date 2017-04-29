@@ -32,14 +32,16 @@ namespace WindowsFormsApplication7
 
         int i_global = 0;
 
+        private int N;
+
         StreamReader reader;
 
-        GlobalValues.SplineBox spline1;
-        GlobalValues.SplineBox spline2;
-        GlobalValues.SplineBox spline3;
-        private GlobalValues.SplineBox cSpline1;
-        private GlobalValues.SplineBox cSpline2;
-        private GlobalValues.SplineBox cSpline3;
+        Commons.SplineBox spline1;
+        Commons.SplineBox spline2;
+        Commons.SplineBox spline3;
+        private Commons.SplineBox cSpline1;
+        private Commons.SplineBox cSpline2;
+        private Commons.SplineBox cSpline3;
 
         [DllImport("Kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private unsafe static extern uint CreateThread(
@@ -145,10 +147,78 @@ namespace WindowsFormsApplication7
         [DllImport("kernel32.dll", EntryPoint = "WaitForMultipleObjects", SetLastError = true)]
         static extern int WaitForMultipleObjects(UInt32 nCount, IntPtr[] lpHandles, Boolean fWaitAll, UInt32 dwMilliseconds);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool ReadFile(IntPtr hFile, 
+            [Out] double[] lpBuffer,
+            uint nNumberOfBytesToRead, 
+            out uint lpNumberOfBytesRead, 
+            IntPtr lpOverlapped);
 
-        static IntPtr _semaphore;
-        static IntPtr _mutex;
-        static IntPtr _event;
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool ReadFile(IntPtr hFile,
+            [Out] int lpBuffer,
+            uint nNumberOfBytesToRead,
+            out uint lpNumberOfBytesRead,
+            IntPtr lpOverlapped);
+
+        const int STD_OUTPUT_HANDLE = -11;
+        const int STD_INPUT_HANDLE = -10;
+        const int STD_ERROR_HANDLE = -12;
+
+
+        [DllImport("kernel32.dll", EntryPoint = "GetStartupInfoW")]
+        static extern void GetStartupInfo(out STARTUPINFO lpStartupInfo);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct STARTUPINFO
+        {
+            public Int32 cb;
+            public string lpReserved;
+            public string lpDesktop;
+            public string lpTitle;
+            public Int32 dwX;
+            public Int32 dwY;
+            public Int32 dwXSize;
+            public Int32 dwYSize;
+            public Int32 dwXCountChars;
+            public Int32 dwYCountChars;
+            public Int32 dwFillAttribute;
+            public Int32 dwFlags;
+            public Int16 wShowWindow;
+            public Int16 cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr CreateFile(
+            [MarshalAs(UnmanagedType.LPTStr)] string filename,
+            [MarshalAs(UnmanagedType.U4)] FileAccess access,
+            [MarshalAs(UnmanagedType.U4)] FileShare share,
+            IntPtr securityAttributes, // optional SECURITY_ATTRIBUTES struct or IntPtr.Zero
+            [MarshalAs(UnmanagedType.U4)] FileMode creationDisposition,
+            [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
+            IntPtr templateFile);
+
+        [DllImport("kernel32.dll")]
+        static extern bool ConnectNamedPipe(IntPtr hNamedPipe,
+            [In] ref System.Threading.NativeOverlapped lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr CreateNamedPipe(string lpName,
+            uint dwOpenMode,
+            uint dwPipeMode,
+            uint nMaxInstances,
+            uint nOutBufferSize,
+            uint nInBufferSize,
+            uint nDefaultTimeOut,
+            IntPtr lpSecurityAttributes);
+
+
+        private static IntPtr _semaphore;
+        private static IntPtr _mutex;
+        private static IntPtr _event;
         private static IntPtr c1;
         private static  IntPtr c2;
 
@@ -157,7 +227,7 @@ namespace WindowsFormsApplication7
             InitializeComponent();
             //button3.Enabled = false;
             button4.Enabled = false;
-            GlobalValues.LogToFile = true;
+            Commons.LogToFile = true;
             button5.Enabled = false;
             label10.Visible = false;
             label11.Visible = false;
@@ -169,18 +239,29 @@ namespace WindowsFormsApplication7
             SetEvent(_event);
             label14.Visible = false;
             chart4.Visible = false;
-            Form2 f2 = new Form2();
-            f2.ShowDialog();
+            //Form2 f2 = new Form2();
+            //f2.ShowDialog();
             c1 = IntPtr.Zero;
             c2 = new IntPtr(1);
+
+            //lab 5
+            // disable form 2 appereance and
+            button3.Visible = false;
+            button6.Visible = false;
+            label3.Visible = false;
+            label2.Visible = false;
+            textBox2.Visible = false;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             AllocConsole();
-            GlobalValues.xlist = new List<double>();
-            GlobalValues.ylist = new List<double>();
-            /*switch (GlobalValues.SyncWay)
+            Console.WriteLine("before init");
+            InitFromPipe();
+            Console.WriteLine("afterInit");
+            Commons.xlist = new List<double>();
+            Commons.ylist = new List<double>();
+            /*switch (Commons.SyncWay)
             {
                 case Sync.Semaphore:
                 {
@@ -205,52 +286,103 @@ namespace WindowsFormsApplication7
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool AllocConsole();
 
+        private void InitFromPipe()
+        {
+            Console.WriteLine("Hello");
+            var pipe1 = CreateNamedPipe("\\\\.\\pipe\\MyPipe1", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            var pipe = CreateNamedPipe("\\\\.\\pipe\\MyPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
+            //var file1 = CreateFile("\\\\.\\pipe\\MyPipe1", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
+            //Console.WriteLine("Hello1");
+            System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
+            //Console.WriteLine("Hello2");
+            //ConnectNamedPipe(pipe1, ref zz);
+            //Console.WriteLine("Hello3");
+            uint q1 = 0;
+            ReadFile(pipe1, N, 64, out q1, IntPtr.Zero);
+            //var file = CreateFile("\\\\.\\pipe\\MyPipe", FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.OpenOrCreate, 0, IntPtr.Zero);
+            //ConnectNamedPipe(pipe, ref zz);
+            label4.Text = N.ToString();
+            var arrays = new double[10];
+            var arrayX = new double[N];
+            var arrayY = new double[N];
+            ReadFile(pipe, arrays, 64, out q1, IntPtr.Zero);
+            for (var i = 0; i < N; i++)
+            {
+                arrayX[i] = arrays[i];
+                arrayY[i] = arrays[N + i];
+            }
+            var syncWay = arrays[2 * N];
+            Commons.SyncWay = GetValue((int)syncWay);
+            Commons.X = arrayX;
+            Commons.Y = arrayY;
+        }
+
+        private static Sync GetValue(int syncWay)
+        {
+            if (syncWay == 1)
+                return Sync.Semaphore;
+            if (syncWay == 2)
+            {
+                return Sync.Mutex;
+            }
+            if (syncWay == 3)
+            {
+                return Sync.Event;
+            }
+            return 0;
+        }
+
         public void ReadPoints()
         {
-            reader = new StreamReader("C:\\Users\\veryoldbarny\\Documents\\input.txt");
+            
+            reader = new StreamReader("C:\\Users\\veryoldbarny\\input.txt");
+
+            //reader = new StreamReader("C:\\Users\\veryoldbarny\\Documents\\input.txt");
             // Номер строки с первой ошибкой, если такая имеется
             error_line = 0;
 
-            GlobalValues.SIZE = Convert.ToInt32(reader.ReadLine());
-            GlobalValues.X = new double[GlobalValues.SIZE];
-            for (int i = 0; i < GlobalValues.SIZE; i++) GlobalValues.X[i] = 0.0;
-            GlobalValues.Y = new double[GlobalValues.SIZE];
-            for (int i = 0; i < GlobalValues.SIZE; i++) GlobalValues.Y[i] = 0.0;
+            Commons.SIZE = Convert.ToInt32(reader.ReadLine());
+            int sync = Convert.ToInt32(reader.ReadLine());
+            Commons.SyncWay = GetValue(sync);
+            Commons.X = new double[Commons.SIZE];
+            for (int i = 0; i < Commons.SIZE; i++) Commons.X[i] = 0.0;
+            Commons.Y = new double[Commons.SIZE];
+            for (int i = 0; i < Commons.SIZE; i++) Commons.Y[i] = 0.0;
 
             // Проверка на корректность считанных точек
             string line = "";
             string[] points;
 
-            for (int i = 0; i < GlobalValues.SIZE; i++)
+            for (int i = 0; i < Commons.SIZE; i++)
             {
                 line = reader.ReadLine();
                 points = line.Split();
                 error_line++;
-                GlobalValues.X[i] = Convert.ToDouble(points[0]);
-                GlobalValues.Y[i] = Convert.ToDouble(points[1]);
+                Commons.X[i] = Convert.ToDouble(points[0]);
+                Commons.Y[i] = Convert.ToDouble(points[1]);
             }
 
             // Сортировка точек в порядке возрастания по x
             double x_change = 0, y_change = 0;
-            for (int i = 0; i < GlobalValues.SIZE - 1; i++)
-                for (int j = 0; j < GlobalValues.SIZE - i - 1; j++)
-                    if (GlobalValues.X[j] > GlobalValues.X[j + 1])
+            for (int i = 0; i < Commons.SIZE - 1; i++)
+                for (int j = 0; j < Commons.SIZE - i - 1; j++)
+                    if (Commons.X[j] > Commons.X[j + 1])
                     {
-                        x_change = GlobalValues.X[j];
-                        GlobalValues.X[j] = GlobalValues.X[j + 1];
-                        GlobalValues.X[j + 1] = x_change;
-                        y_change = GlobalValues.Y[j];
-                        GlobalValues.Y[j] = GlobalValues.Y[j + 1];
-                        GlobalValues.Y[j + 1] = y_change;
+                        x_change = Commons.X[j];
+                        Commons.X[j] = Commons.X[j + 1];
+                        Commons.X[j + 1] = x_change;
+                        y_change = Commons.Y[j];
+                        Commons.Y[j] = Commons.Y[j + 1];
+                        Commons.Y[j + 1] = y_change;
                     }
 
             // Оповещение ошибки в том случае, если несколько точек имеют одинаковое значение координаты х
             x_same = 0;
-            for (int i = 1; i < GlobalValues.SIZE; i++)
-                if (GlobalValues.X[i] == GlobalValues.X[i - 1])
+            for (int i = 1; i < Commons.SIZE; i++)
+                if (Commons.X[i] == Commons.X[i - 1])
                 {
                     same = true;
-                    x_same = GlobalValues.X[i];
+                    x_same = Commons.X[i];
                 }
             reader.Close();
         }
@@ -262,11 +394,11 @@ namespace WindowsFormsApplication7
 
         private void realChart()
         {
-            for (int i = 0; i < GlobalValues.X.Length; i++)
+            for (int i = 0; i < Commons.X.Length; i++)
             {
-                chart1.Series["real"].Points.AddXY(GlobalValues.X[i], GlobalValues.Y[i]);
-                chart2.Series["real"].Points.AddXY(GlobalValues.X[i], GlobalValues.Y[i]);
-                chart3.Series["real"].Points.AddXY(GlobalValues.X[i], GlobalValues.Y[i]);
+                chart1.Series["real"].Points.AddXY(Commons.X[i], Commons.Y[i]);
+                chart2.Series["real"].Points.AddXY(Commons.X[i], Commons.Y[i]);
+                chart3.Series["real"].Points.AddXY(Commons.X[i], Commons.Y[i]);
             }
             chart1.Series["real"].MarkerStyle = MarkerStyle.Circle;
             chart2.Series["real"].MarkerStyle = MarkerStyle.Circle;
@@ -301,9 +433,9 @@ namespace WindowsFormsApplication7
         {
             try
             {
-                spline1 = new GlobalValues.SplineBox(Int32.Parse(textBox1.Text));
-                spline2 = new GlobalValues.SplineBox(Int32.Parse(textBox4.Text));
-                spline3 = new GlobalValues.SplineBox(Int32.Parse(textBox3.Text));
+                spline1 = new Commons.SplineBox(Int32.Parse(textBox1.Text));
+                spline2 = new Commons.SplineBox(Int32.Parse(textBox4.Text));
+                spline3 = new Commons.SplineBox(Int32.Parse(textBox3.Text));
 
                 this.ReadPoints();
                 this.clearChart();
@@ -326,9 +458,11 @@ namespace WindowsFormsApplication7
         }
         private void button3_Click(object sender, EventArgs e)
         {
+            /*
             int naturalDotsSize = Int32.Parse(textBox2.Text);
             Generator gen = new Generator();
             gen.generate(naturalDotsSize, 1, 3);
+             * */
 
         }
 
@@ -342,15 +476,15 @@ namespace WindowsFormsApplication7
 
         }
 
-        /*private void cubicInterpolation(GlobalValues.SplineBox spline, Chart chart)
+        /*private void cubicInterpolation(Commons.SplineBox spline, Chart chart)
         {
             CubicSpline cSpline = new CubicSpline();
-            cSpline.BuildSpline(GlobalValues.X, GlobalValues.Y, GlobalValues.X.Length);
+            cSpline.BuildSpline(Commons.X, Commons.Y, Commons.X.Length);
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
              *
-            for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
+            for (int i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
                 spline.listY.Add(cSpline.Interpolate(i));
@@ -362,15 +496,15 @@ namespace WindowsFormsApplication7
             chart.Series["interpolated3"].ChartType = SeriesChartType.Line;
         }*/
 
-        /*private void qInterpolation(GlobalValues.SplineBox spline, Chart chart)
+        /*private void qInterpolation(Commons.SplineBox spline, Chart chart)
         {
             QSpline qSpline = new QSpline();
-            qSpline.BuildSpline(GlobalValues.X, GlobalValues.Y, GlobalValues.X.Length);
+            qSpline.BuildSpline(Commons.X, Commons.Y, Commons.X.Length);
             /*
             List<double> listx = new List<double>();
             List<double> listy = new List<double>();
              *
-            for (int i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i++)
+            for (int i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i++)
             {
                 spline.listX.Add(i);
                 spline.listY.Add(qSpline.Interpolate(i));
@@ -418,11 +552,11 @@ namespace WindowsFormsApplication7
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private static void checkSplines(GlobalValues.SplineBox spline, Chart chart)
+        private static void checkSplines(Commons.SplineBox spline, Chart chart)
         {
             spline.dict = new Dictionary<double, double>();
-            GlobalValues.xlist = GlobalValues.X.ToList<double>();
-            GlobalValues.ylist = GlobalValues.Y.ToList<double>();
+            Commons.xlist = Commons.X.ToList<double>();
+            Commons.ylist = Commons.Y.ToList<double>();
 
             double step = 0.3;
 
@@ -430,8 +564,8 @@ namespace WindowsFormsApplication7
             {
                 spline.dict = new Dictionary<double, double>();
                 LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
-                splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                splineInterpol.Init(Commons.xlist, Commons.ylist);
+                for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                 {
                     // spline.listX.Add(i);
                     spline.dict.Add(i, splineInterpol.Interpolate(i));
@@ -442,8 +576,8 @@ namespace WindowsFormsApplication7
                 spline.dict = new Dictionary<double, double>();
 
                 QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
-                quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                quadraticSplineInterpol.Init(Commons.xlist, Commons.ylist);
+                for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                 {
                     //spline.listX.Add(i);
                     //spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
@@ -455,8 +589,8 @@ namespace WindowsFormsApplication7
                 spline.dict = new Dictionary<double, double>();
 
                 CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
-                cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                cubicSplineInterpol.Init(Commons.xlist, Commons.ylist);
+                for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                 {
                     //spline.listX.Add(i);
                     //spline.listY.Add(cubicSplineInterpol.Interpolate(i));
@@ -467,8 +601,8 @@ namespace WindowsFormsApplication7
             {
                 spline.dict = new Dictionary<double, double>();
 
-                BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(GlobalValues.X, GlobalValues.Y);
-                for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(Commons.X, Commons.Y);
+                for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                 {
                     spline.dict.Add(i, nevilleInterpol.Interpolate(i));
                 }
@@ -478,8 +612,8 @@ namespace WindowsFormsApplication7
             {
                 case 1:
                     LinearSplineInterpolation splineInterpol = new LinearSplineInterpolation();
-                    splineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i+=step)
+                    splineInterpol.Init(Commons.xlist, Commons.ylist);
+                    for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i+=step)
                     {
                        // spline.listX.Add(i);
                         spline.dict.Add(i, splineInterpol.Interpolate(i));
@@ -489,8 +623,8 @@ namespace WindowsFormsApplication7
                 case 2:
                     //MessageBox.Show("do not work for now");
                     QuadraticSpline quadraticSplineInterpol = new QuadraticSpline();
-                    quadraticSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                    quadraticSplineInterpol.Init(Commons.xlist, Commons.ylist);
+                    for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                     {
                         //spline.listX.Add(i);
                         //spline.listY.Add(quadraticSplineInterpol.Interpolate(i));
@@ -499,8 +633,8 @@ namespace WindowsFormsApplication7
                     break;
                 case 3:
                     CubicSplineInterpolation cubicSplineInterpol = new CubicSplineInterpolation();
-                    cubicSplineInterpol.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                    cubicSplineInterpol.Init(Commons.xlist, Commons.ylist);
+                    for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                     {
                         //spline.listX.Add(i);
                         //spline.listY.Add(cubicSplineInterpol.Interpolate(i));
@@ -511,15 +645,15 @@ namespace WindowsFormsApplication7
                     CubicSplineInterpolation cubicSplineInterpol1 = new CubicSplineInterpolation();
                     QuadraticSpline quadraticSplineInterpol1 = new QuadraticSpline();
                     //MathNet.Numerics.Interpolation.NevillePolynomialInterpolation
-                    BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(GlobalValues.X, GlobalValues.Y);
-                    NevillePolynomialInterpolation logLinearInterpol = new NevillePolynomialInterpolation(GlobalValues.X, GlobalValues.Y);
-                    cubicSplineInterpol1.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    quadraticSplineInterpol1.Init(GlobalValues.xlist, GlobalValues.ylist);
-                    for (double i = Convert.ToInt32(GlobalValues.X[0]); i < GlobalValues.X[GlobalValues.X.Length - 1]; i += step)
+                    BulirschStoerRationalInterpolation nevilleInterpol = new BulirschStoerRationalInterpolation(Commons.X, Commons.Y);
+                    NevillePolynomialInterpolation logLinearInterpol = new NevillePolynomialInterpolation(Commons.X, Commons.Y);
+                    cubicSplineInterpol1.Init(Commons.xlist, Commons.ylist);
+                    quadraticSplineInterpol1.Init(Commons.xlist, Commons.ylist);
+                    for (double i = Convert.ToInt32(Commons.X[0]); i < Commons.X[Commons.X.Length - 1]; i += step)
                     {
                         //spline.listX.Add(i);
                         //spline.listY.Add(cubicSplineInterpol1.Interpolate(i));
-                       // if (GlobalValues.xlist.Contains(i)&&spline.POWER%2!=0)
+                       // if (Commons.xlist.Contains(i)&&spline.POWER%2!=0)
 
                         ///if (spline.POWER % 2 != 0)
                         //    spline.dict.Add(i, cubicSplineInterpol1.Interpolate(i + spline.POWER * 1.5));
@@ -527,13 +661,13 @@ namespace WindowsFormsApplication7
 
                         ///spline.dict.Add(i, nevilleInterpol.Interpolate(i));
                         //spline.dict.Add(i, logLinearInterpol.Interpolate(i));
-                        //else if (GlobalValues.xlist.Contains(i) && spline.POWER%2==0)
+                        //else if (Commons.xlist.Contains(i) && spline.POWER%2==0)
                          //   spline.dict.Add(i, quadraticSplineInterpol1.Interpolate(i+spline.POWER*1.5));
                     }
                     break;
             }*/
         }
-        private void drawChart(GlobalValues.SplineBox spline, Chart chart)
+        private void drawChart(Commons.SplineBox spline, Chart chart)
         {
             //List<double> ll = spline.dict.Keys.ToList();
             //Console.WriteLine(spline.dict);
@@ -573,14 +707,14 @@ namespace WindowsFormsApplication7
         {
             ProcessTimeStopwatch processTimeStopwatch = new ProcessTimeStopwatch();
             processTimeStopwatch.Start();
-            GlobalValues.isRunning = true;
-            foreach (var spline1Priority in GlobalValues.ThreadPriorities)
+            Commons.isRunning = true;
+            foreach (var spline1Priority in Commons.ThreadPriorities)
             {
-                foreach (var spline2Priority in GlobalValues.ThreadPriorities)
+                foreach (var spline2Priority in Commons.ThreadPriorities)
                 {
-                    foreach (var spline3Priority in GlobalValues.ThreadPriorities)
+                    foreach (var spline3Priority in Commons.ThreadPriorities)
                     {
-                        //GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                        //Commons.EnterCriticalSection(Commons.LockObject);
                         try
                         {
                             cycleCount++;
@@ -595,10 +729,10 @@ namespace WindowsFormsApplication7
                         }
                         finally
                         {
-                          //  GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                          //  Commons.LeaveCriticalSection(Commons.LockObject);
                         }
                         Thread.Sleep(10);
-                        GlobalValues.SevEvent();
+                        Commons.SevEvent();
                     }
                 }
             }
@@ -606,7 +740,7 @@ namespace WindowsFormsApplication7
             Logger.Current.WriteLine();
             Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch.Elapsed);
             Console.WriteLine(processTimeStopwatch.Elapsed);
-            GlobalValues.isRunning = false;
+            Commons.isRunning = false;
             drawChart(spline1, chart1);
             drawChart(spline2, chart2);
             drawChart(spline3, chart3);
@@ -615,7 +749,7 @@ namespace WindowsFormsApplication7
 
         [STAThread]
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private static void StartNewThread(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
+        private static void StartNewThread(Commons.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
             Action action = () => Worker(spline, chart, threadPriority);
             ThreadStart threadStart = new ThreadStart(action);
@@ -645,11 +779,11 @@ namespace WindowsFormsApplication7
         }
 
 
-        private static void Worker(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority)
+        private static void Worker(Commons.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
             ThreadTimeStopwatch threadTimeStopwatch = new ThreadTimeStopwatch();
             threadTimeStopwatch.Start();
-            switch (GlobalValues.SyncWay)
+            switch (Commons.SyncWay)
             {
                 case Sync.Semaphore:
                 {
@@ -680,8 +814,8 @@ namespace WindowsFormsApplication7
                 }
                 default:
                 {
-                    GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
-                    GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                    Commons.EnterCriticalSection(Commons.LockObject);
+                    Commons.LeaveCriticalSection(Commons.LockObject);
                     break;
                 }
 
@@ -695,8 +829,8 @@ namespace WindowsFormsApplication7
             }
             finally
             {
-                GlobalValues.WaitForSingleObject();
-                GlobalValues.SevEvent();
+                Commons.WaitForSingleObject();
+                Commons.SevEvent();
             }*/
             Console.WriteLine(c1);
             Console.WriteLine(c2);
@@ -704,7 +838,7 @@ namespace WindowsFormsApplication7
 
         
 
-        private static void MakeChanges(GlobalValues.SplineBox spline, Chart chart, ThreadPriority threadPriority,
+        private static void MakeChanges(Commons.SplineBox spline, Chart chart, ThreadPriority threadPriority,
             ThreadTimeStopwatch threadTimeStopwatch)
         {
             checkSplines(spline, chart);
@@ -715,7 +849,7 @@ namespace WindowsFormsApplication7
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private static void WriteResultSummary(GlobalValues.SplineBox spline, ThreadPriority threadPriority, TimeSpan elapsed)
+        private static void WriteResultSummary(Commons.SplineBox spline, ThreadPriority threadPriority, TimeSpan elapsed)
         {
             Logger.Current.WriteLine(string.Empty);
 
@@ -731,9 +865,9 @@ namespace WindowsFormsApplication7
                 button5.Enabled = false;
 
             // Even the hills Have Eyes
-            cSpline1 = new GlobalValues.SplineBox(spline1.POWER);
-            cSpline2 = new GlobalValues.SplineBox(spline2.POWER);
-            cSpline3 = new GlobalValues.SplineBox(spline3.POWER);
+            cSpline1 = new Commons.SplineBox(spline1.POWER);
+            cSpline2 = new Commons.SplineBox(spline2.POWER);
+            cSpline3 = new Commons.SplineBox(spline3.POWER);
             checkSplines(cSpline1, chart4);
             checkSplines(cSpline2, chart4);
             checkSplines(cSpline3, chart4);
@@ -752,25 +886,25 @@ namespace WindowsFormsApplication7
 
         private void button5_Click(object sender, EventArgs e)
         {
-            if (GlobalValues.isRunning == false)
+            if (Commons.isRunning == false)
             {
 
                 processTimeStopwatch_spec.Start();
-                GlobalValues.isRunning = true;
+                Commons.isRunning = true;
             }
 
             stepRunThreads(i_global, j_global, K_global);
 
-            if (K_global < GlobalValues.ThreadPriorities.Length-1)
+            if (K_global < Commons.ThreadPriorities.Length-1)
             {
                 K_global++;
             }
-            else if (j_global < GlobalValues.ThreadPriorities.Length-1)
+            else if (j_global < Commons.ThreadPriorities.Length-1)
             {
                 j_global++;
                 K_global = 0;
             }
-            else if (i_global < GlobalValues.ThreadPriorities.Length-1)
+            else if (i_global < Commons.ThreadPriorities.Length-1)
             {
                 i_global++;
                 K_global = 0;
@@ -782,7 +916,7 @@ namespace WindowsFormsApplication7
                 Logger.Current.WriteLine();
                 Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch_spec.Elapsed);
                 Console.WriteLine(processTimeStopwatch_spec.Elapsed);
-                GlobalValues.isRunning = false;
+                Commons.isRunning = false;
                 label10.Text = "Итерирование завершено";
             }
 
@@ -800,34 +934,37 @@ namespace WindowsFormsApplication7
             realChart();
             try
             {
-                GlobalValues.EnterCriticalSection(GlobalValues.LockObject);
+                Commons.EnterCriticalSection(Commons.LockObject);
                 cycleCount++;
                 Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
 
-                StartNewThread(spline1, chart4, GlobalValues.ThreadPriorities[i]);
-                StartNewThread(spline2, chart4, GlobalValues.ThreadPriorities[j]);
-                StartNewThread(spline3, chart4, GlobalValues.ThreadPriorities[k]);
+                StartNewThread(spline1, chart4, Commons.ThreadPriorities[i]);
+                StartNewThread(spline2, chart4, Commons.ThreadPriorities[j]);
+                StartNewThread(spline3, chart4, Commons.ThreadPriorities[k]);
 
             }
             finally
             {
-                GlobalValues.LeaveCriticalSection(GlobalValues.LockObject);
+                Commons.LeaveCriticalSection(Commons.LockObject);
             }
             Thread.Sleep(10);
-            GlobalValues.SevEvent();
+            Commons.SevEvent();
             drawChart(cSpline1, chart1);
             drawChart(cSpline2, chart2);
             drawChart(cSpline3, chart3);
-            label11.Text = ("Поток со сплайном степени " + spline1.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[i]);
-            label12.Text = ("Поток со сплайном степени " + spline2.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[j]);
-            label13.Text = ("Поток со сплайном степени " + spline3.POWER + ", приоритет: " + GlobalValues.ThreadPriorities[k]);
+            label11.Text = ("Поток со сплайном степени " + spline1.POWER + ", приоритет: " + Commons.ThreadPriorities[i]);
+            label12.Text = ("Поток со сплайном степени " + spline2.POWER + ", приоритет: " + Commons.ThreadPriorities[j]);
+            label13.Text = ("Поток со сплайном степени " + spline3.POWER + ", приоритет: " + Commons.ThreadPriorities[k]);
         }
 
         private void button6_Click(object sender, EventArgs e)
         {
+            /*
+             * disable for lab5
             Form2 f2 = new Form2();
             f2.ShowDialog();
-            /*switch (GlobalValues.SyncWay)
+             */
+            /*switch (Commons.SyncWay)
             {
                 case Sync.Semaphore:
                 {

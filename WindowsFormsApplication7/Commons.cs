@@ -9,7 +9,7 @@ using System.Threading;
 namespace WindowsFormsApplication7
 {
     public enum Sync { Mutex, Semaphore, Event}
-    static class GlobalValues
+    static class Commons
     {
         public static bool LogToFile { get; set; } //true: создает файл "log.txt" в папке с программой
 

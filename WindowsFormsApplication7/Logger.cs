@@ -40,7 +40,7 @@ namespace WindowsFormsApplication7
             try
             {
                 Console.WriteLine(value);
-                if (GlobalValues.LogToFile)
+                if (Commons.LogToFile)
                 {
                     File.WriteLine(value);
                 }

@@ -25,11 +25,11 @@ namespace WindowsFormsApplication7
         private void button1_Click(object sender, EventArgs e)
         {
             if (radioButton1.Checked)
-                GlobalValues.SyncWay = Sync.Semaphore;
+                Commons.SyncWay = Sync.Semaphore;
             else if (radioButton2.Checked)
-                GlobalValues.SyncWay = Sync.Mutex;
+                Commons.SyncWay = Sync.Mutex;
             else
-                GlobalValues.SyncWay = Sync.Event;
+                Commons.SyncWay = Sync.Event;
             this.Hide();
         }
     }

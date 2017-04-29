@@ -1,3 +1,6 @@
+\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\bin\Debug\Starter.exe.config
+\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\obj\Debug\Starter.exe
+\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\obj\Debug\Starter.pdb
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\bin\Debug\Starter.exe.config
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\bin\Debug\Starter.exe
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\bin\Debug\Starter.pdb
@@ -6,6 +9,3 @@
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.csproj.GenerateResource.Cache
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.exe
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.pdb
-\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\bin\Debug\Starter.exe.config
-\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\obj\Debug\Starter.exe
-\\Mac\Home\Desktop\WindowsFormsApplication7\Starter\obj\Debug\Starter.pdb
