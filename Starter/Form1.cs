@@ -251,18 +251,18 @@ namespace Starter
                 FileMode.OpenOrCreate, 0, IntPtr.Zero);
             //gen.SortArrays(syncWay);
             WriteFile(lenFile,new double[] { N }, 64, out bytesWritten, IntPtr.Zero);
-            WriteFile(arrayXFile, X, 1024, out bytesWritten1, IntPtr.Zero);
-            WriteFile(arrayYFile, Y, 1024, out bytesWritten1, IntPtr.Zero);
+            WriteFile(arrayXFile, X, 128, out bytesWritten1, IntPtr.Zero);
+            WriteFile(arrayYFile, Y, 128, out bytesWritten1, IntPtr.Zero);
             WriteFile(syncWayFile, new double[] { syncWay }, 64, out bytesWritten, IntPtr.Zero);
             // todo change location file
             //CreateProcessHelper.CreateProcess("C:\\Users\\veryoldbarny\\Documents\\WindowsFormsApplication7.exe", String.Empty);
             //String path = "C:\\Users\\veryoldbarny\\WindowsFormsApplication7.exe";
 
-            CloseHandle(lenFile);
-            CloseHandle(arrayXFile);
-            CloseHandle(arrayYFile);
-            CloseHandle(syncWayFile);
-
+            //CloseHandle(lenFile);
+            //CloseHandle(arrayXFile);
+            //CloseHandle(arrayYFile);
+            //CloseHandle(syncWayFile);
+            System.Windows.Forms.Application.Exit();
             //CreateProcess(path, null, IntPtr.Zero,
             //     IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
         }

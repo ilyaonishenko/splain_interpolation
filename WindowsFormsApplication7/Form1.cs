@@ -247,9 +247,13 @@ namespace WindowsFormsApplication7
         private STARTUPINFO startupInfo;
         private PROCESS_INFORMATION processInfo;
 
+        [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr lenPipe;
+        [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr arrayXPipe;
+        [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr arrayYPipe;
+        [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr syncWayPipe;
 
         public Form1()
@@ -330,12 +334,11 @@ namespace WindowsFormsApplication7
             var n = (int)N[0];
             Commons.SIZE = n;
             Console.WriteLine("N is " + n);
-
             var arrayX = new double[n];
             var arrayY = new double[n];
 
-            ReadFile(arrayXPipe, arrayX, 1024, out q1, IntPtr.Zero);
-            ReadFile(arrayYPipe, arrayY, 1024, out q1, IntPtr.Zero);
+            ReadFile(arrayXPipe, arrayX, 128, out q1, IntPtr.Zero);
+            ReadFile(arrayYPipe, arrayY, 128, out q1, IntPtr.Zero);
 
             ReadFile(syncWayPipe, N, 64, out q1, IntPtr.Zero);
             
@@ -357,6 +360,7 @@ namespace WindowsFormsApplication7
             Console.WriteLine("SyncWay: "+Commons.SyncWay);
         }
 
+
         private void CreatePipe()
         {
 
@@ -366,8 +370,23 @@ namespace WindowsFormsApplication7
             arrayYPipe = CreateNamedPipe("\\\\.\\pipe\\ArrayYPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
             syncWayPipe = CreateNamedPipe("\\\\.\\pipe\\SyncWayPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
             //System.Threading.NativeOverlapped zz = new System.Threading.NativeOverlapped();
-            CreateProcess(path, null, IntPtr.Zero,
-                IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
+
+            //режимокрытияканала
+            //режимработыканала
+            //максимальноеколичествореализаций
+            //размервыходногобуфера
+            //размервходногобуфера
+            //времяожиданиявмс
+            //адресаттрибутовзащиты
+
+            // PIPE_ACCESS_DUPLEX = 0x00000003
+            // PIPE_TYPE_MESSAGE = 0x00000004
+            //PIPE_READMODE_MESSAGE = 0x00000002
+            //PIPE_WAIT = 0x00000000
+            //PIPE_NOWAIT = 0x00000001
+            CreateProcess(path, null, IntPtr.Zero, IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
+           // Form2 f2 = new Form2();
+           // f2.ShowDialog();
         }
 
         private static Sync GetValue(int syncWay)
@@ -387,8 +406,8 @@ namespace WindowsFormsApplication7
 
         public void ReadPoints()
         {
-            /*
             
+            /*
             reader = new StreamReader("C:\\Users\\veryoldbarny\\input.txt");
 
             //reader = new StreamReader("C:\\Users\\veryoldbarny\\Documents\\input.txt");
@@ -440,6 +459,7 @@ namespace WindowsFormsApplication7
                 }
             reader.Close();
              */
+             
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -763,38 +783,42 @@ namespace WindowsFormsApplication7
             ProcessTimeStopwatch processTimeStopwatch = new ProcessTimeStopwatch();
             processTimeStopwatch.Start();
             Commons.isRunning = true;
-            foreach (var spline1Priority in Commons.ThreadPriorities)
-            {
-                foreach (var spline2Priority in Commons.ThreadPriorities)
-                {
-                    foreach (var spline3Priority in Commons.ThreadPriorities)
-                    {
-                        //Commons.EnterCriticalSection(Commons.LockObject);
-                        try
-                        {
-                            cycleCount++;
-                            Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
-                            StartNewThread(spline1, chart1, spline1Priority);
-                            StartNewThread(spline2, chart2, spline2Priority);
-                            StartNewThread(spline3, chart3, spline3Priority);
-                        }
-                        catch (NullReferenceException e)
-                        {
-                            MessageBox.Show("NRE occures. Please restart the program");
-                        }
-                        finally
-                        {
-                          //  Commons.LeaveCriticalSection(Commons.LockObject);
-                        }
-                        Thread.Sleep(10);
-                        Commons.SevEvent();
-                    }
-                }
-            }
+            //foreach (var spline1Priority in Commons.ThreadPriorities)
+            //{
+            //    foreach (var spline2Priority in Commons.ThreadPriorities)
+            //    {
+            //        foreach (var spline3Priority in Commons.ThreadPriorities)
+            //        {
+            //            Commons.EnterCriticalSection(Commons.LockObject);
+            //            try
+            //            {
+            //               cycleCount++;
+            //                Logger.Current.WriteLine("Цикл номер: {0}", cycleCount);
+                            StartNewThread(spline1, chart1, Commons.ThreadPriorities[3]);
+                            StartNewThread(spline2, chart2, Commons.ThreadPriorities[3]);
+                            StartNewThread(spline3, chart3, Commons.ThreadPriorities[3]);
+            MakeChanges(spline1, chart1, Commons.ThreadPriorities[3], null);
+            MakeChanges(spline2, chart2, Commons.ThreadPriorities[3], null);
+            MakeChanges(spline3, chart3, Commons.ThreadPriorities[3], null);
+            Thread.Sleep(100);
+            //            }
+            //            catch (NullReferenceException e)
+            //            {
+            //                MessageBox.Show("NRE occures. Please restart the program");
+            //            }
+            //            finally
+            ///            {
+              //              Commons.LeaveCriticalSection(Commons.LockObject);
+             //           }
+              //          Thread.Sleep(100);
+              //          Commons.SevEvent();
+           //         }
+           //     }
+           // }
             processTimeStopwatch.Stop();
             Logger.Current.WriteLine();
-            Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch.Elapsed);
-            Console.WriteLine(processTimeStopwatch.Elapsed);
+            //Logger.Current.WriteLine("Время работы процесса: {0}", processTimeStopwatch.Elapsed);
+            //Console.WriteLine(processTimeStopwatch.Elapsed);
             Commons.isRunning = false;
             drawChart(spline1, chart1);
             drawChart(spline2, chart2);
@@ -836,16 +860,18 @@ namespace WindowsFormsApplication7
 
         private static void Worker(Commons.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
+
             ThreadTimeStopwatch threadTimeStopwatch = new ThreadTimeStopwatch();
             threadTimeStopwatch.Start();
+            
             switch (Commons.SyncWay)
             {
                 case Sync.Semaphore:
                 {
                     //c1 = getSemaphoreCount(_semaphore, 1);
-                    Thread.Sleep(10);
-                    WaitForSingleObject(_semaphore, 0xFFFFFFFF);
-                    Thread.Sleep(10);
+                    //Thread.Sleep(10);
+                    //WaitForSingleObject(_semaphore, 0xFFFFFFFF);
+                    //Thread.Sleep(10);
                     //c2 = getSemaphoreCount(_semaphore, 1);
                     MakeChanges(spline, chart, threadPriority, threadTimeStopwatch);
                     ReleaseSemaphore(_semaphore, 1, (IntPtr)null);
@@ -875,8 +901,7 @@ namespace WindowsFormsApplication7
                 }
 
             }
-
-            log();
+            //log();
             /*
             try
             {
@@ -887,8 +912,8 @@ namespace WindowsFormsApplication7
                 Commons.WaitForSingleObject();
                 Commons.SevEvent();
             }*/
-            Console.WriteLine(c1);
-            Console.WriteLine(c2);
+            //Console.WriteLine(c1);
+            //Console.WriteLine(c2);
         }
 
         
@@ -897,10 +922,13 @@ namespace WindowsFormsApplication7
             ThreadTimeStopwatch threadTimeStopwatch)
         {
             checkSplines(spline, chart);
+            if (threadTimeStopwatch != null)
+            {
 
-            threadTimeStopwatch.Stop();
+                threadTimeStopwatch.Stop();
 
-            WriteResultSummary(spline, threadPriority, threadTimeStopwatch.Elapsed);
+                WriteResultSummary(spline, threadPriority, threadTimeStopwatch.Elapsed);
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -1002,7 +1030,7 @@ namespace WindowsFormsApplication7
             {
                 Commons.LeaveCriticalSection(Commons.LockObject);
             }
-            Thread.Sleep(10);
+            //Thread.Sleep(10);
             Commons.SevEvent();
             drawChart(cSpline1, chart1);
             drawChart(cSpline2, chart2);

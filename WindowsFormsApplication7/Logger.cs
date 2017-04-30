@@ -39,7 +39,7 @@ namespace WindowsFormsApplication7
             Monitor.Enter(lockObject);
             try
             {
-                Console.WriteLine(value);
+                //Console.WriteLine(value);
                 if (Commons.LogToFile)
                 {
                     File.WriteLine(value);
