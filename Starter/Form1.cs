@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -159,6 +160,7 @@ namespace Starter
         private int SIZE;
         private double[] X;
         private double[] Y;
+        private bool readFromFile = false;
 
         public void ReadPoints()
         {
@@ -221,12 +223,15 @@ namespace Starter
                 syncWay = 3; // event
 
 
-            // todo write exception
-            N = Int32.Parse(textBox1.Text);
+            if (!readFromFile)
+            {
+                // todo write exception
+                N = Int32.Parse(textBox1.Text);
 
-            Generator gen = new Generator();
+                Generator gen = new Generator();
 
-            gen.generate(N, 1, 3);
+                gen.generate(N, 1, 3);
+            }
             ReadPoints();
 
             //arrays[2*N] = syncWay;
@@ -270,6 +275,30 @@ namespace Starter
         private void Form1_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            CheckState();
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            CheckState();
+        }
+
+        private void CheckState()
+        {
+            if (radioButton5.Checked)
+            {
+                textBox1.Enabled = true;
+                readFromFile = false;
+            }
+            else
+            {
+                textBox1.Enabled = false;
+                readFromFile = true;
+            }
         }
     }
 }

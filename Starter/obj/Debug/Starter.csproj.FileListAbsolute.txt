@@ -9,3 +9,4 @@
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.csproj.GenerateResource.Cache
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.exe
 \\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.pdb
+\\Mac\Home\Documents\Visual Studio 2013\Projects\WindowsFormsApplication7\Starter\obj\Debug\Starter.csprojResolveAssemblyReference.cache

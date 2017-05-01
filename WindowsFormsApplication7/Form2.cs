@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,207 +16,56 @@ namespace WindowsFormsApplication7
     public partial class Form2 : Form
     {
 
-        [DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool WriteFile(IntPtr handle,
-            double[] lpBuffer,
-            uint numBytesToWrite,
-            out uint numBytesWritten,
-            IntPtr lpOverlapped);
-
-        [DllImport("kernel32.dll", BestFitMapping = true, CharSet = CharSet.Ansi)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool WriteFile(IntPtr handle,
-            int lpBuffer,
-            uint numBytesToWrite,
-            out uint numBytesWritten,
-            IntPtr lpOverlapped);
-
-        [DllImport("kernel32", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern bool CloseHandle(IntPtr handle);
-
-
-
-        //PIPE
         [DllImport("kernel32.dll")]
-        static extern bool CreatePipe(out IntPtr hReadPipe, out IntPtr hWritePipe,
-            ref SECURITY_ATTRIBUTES lpPipeAttributes, uint nSize);
+        static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);
 
-
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct SECURITY_ATTRIBUTES
-        {
-            public uint nLength;
-            public IntPtr lpSecurityDescriptor;
-            public bool bInheritHandle;
-        }
-
+        //ТАЙМЕРЫ!
         [DllImport("kernel32.dll")]
-        static extern bool CreateProcess(string lpApplicationName,
-            string lpCommandLine,
-            IntPtr lpProcessAttributes,
-            IntPtr lpThreadAttributes,
-            bool bInheritHandles,
-            uint dwCreationFlags,
-            IntPtr lpEnvironment,
-            string lpCurrentDirectory,
-            ref STARTUPINFO lpStartupInfo,
-            out PROCESS_INFORMATION lpProcessInformation);
+        static extern IntPtr CreateWaitableTimer(IntPtr lpTimerAttributes, bool bManualReset, string lpTimerName);
 
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        struct STARTUPINFO
-        {
-            public Int32 cb;
-            public string lpReserved;
-            public string lpDesktop;
-            public string lpTitle;
-            public Int32 dwX;
-            public Int32 dwY;
-            public Int32 dwXSize;
-            public Int32 dwYSize;
-            public Int32 dwXCountChars;
-            public Int32 dwYCountChars;
-            public Int32 dwFillAttribute;
-            public Int32 dwFlags;
-            public Int16 wShowWindow;
-            public Int16 cbReserved2;
-            public IntPtr lpReserved2;
-            public IntPtr hStdInput;
-            public IntPtr hStdOutput;
-            public IntPtr hStdError;
-        }
+        public delegate void TimerCompleteDelegate();
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        static extern IntPtr CreateNamedPipe(string lpName,
-            uint dwOpenMode,
-            uint dwPipeMode,
-            uint nMaxInstances,
-            uint nOutBufferSize,
-            uint nInBufferSize,
-            uint nDefaultTimeOut,
-            IntPtr lpSecurityAttributes);
-
-
-
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct PROCESS_INFORMATION
-        {
-            public IntPtr hProcess;
-            public IntPtr hThread;
-            public int dwProcessId;
-            public int dwThreadId;
-        }
-        [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool DuplicateHandle(IntPtr hSourceProcessHandle,
-            IntPtr hSourceHandle,
-            IntPtr hTargetProcessHandle,
-            out IntPtr lpTargetHandle,
-            uint dwDesiredAccess,
-            [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle,
-            uint dwOptions);
-
+        public static extern bool SetWaitableTimer(IntPtr hTimer, 
+            [In] ref long pDueTime, 
+            int lPeriod, 
+            IntPtr pfnCompletionRoutine, 
+            IntPtr lpArgToCompletionRoutine, 
+            bool fResume);
 
         [DllImport("kernel32.dll")]
-        static extern IntPtr GetCurrentProcess();
+        static extern IntPtr FindFirstChangeNotification(string lpPathName,
+            bool bWatchSubtree, 
+            uint dwNotifyFilter);
 
+        [DllImport("kernel32.dll")]
+        static extern bool FindNextChangeNotification(IntPtr hChangeHandle);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern IntPtr CreateFile(
-            [MarshalAs(UnmanagedType.LPTStr)] string filename,
-            [MarshalAs(UnmanagedType.U4)] FileAccess access,
-            [MarshalAs(UnmanagedType.U4)] FileShare share,
-            IntPtr securityAttributes, // optional SECURITY_ATTRIBUTES struct or IntPtr.Zero
-            [MarshalAs(UnmanagedType.U4)] FileMode creationDisposition,
-            [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
-            IntPtr templateFile);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool AllocConsole();
-
-        private STARTUPINFO startupInfo;
-        private PROCESS_INFORMATION processInfo;
-
-        private int syncWay;
-        private int N = 0;
-        private double[][] arrays;
-
-        private uint bytesWritten;
-        private uint bytesWritten1;
-        private uint bytesRead;
+        
+        private long startTime;
+        private IntPtr waitableTimer;
         public Form2()
         {
             InitializeComponent();
-            startupInfo = new STARTUPINFO();
-            processInfo = new PROCESS_INFORMATION();
-        }
-        private StreamReader reader;
-        private int SIZE;
-        private double[] X;
-        private double[] Y;
-
-        public void ReadPoints()
-        {
-
-
-            reader = new StreamReader("C:\\Users\\veryoldbarny\\input.txt");
-
-            //reader = new StreamReader("C:\\Users\\veryoldbarny\\Documents\\input.txt");
-            // Номер строки с первой ошибкой, если такая имеется
-
-            SIZE = Convert.ToInt32(reader.ReadLine());
-            X = new double[SIZE];
-            for (int i = 0; i < SIZE; i++) X[i] = 0.0;
-            Y = new double[SIZE];
-            for (int i = 0; i < SIZE; i++) Y[i] = 0.0;
-
-            // Проверка на корректность считанных точек
-            string line = "";
-            string[] points;
-
-            for (int i = 0; i < SIZE; i++)
-            {
-                line = reader.ReadLine();
-                points = line.Split();
-                X[i] = Convert.ToDouble(points[0]);
-                Y[i] = Convert.ToDouble(points[1]);
-            }
-
-            // Сортировка точек в порядке возрастания по x
-            double x_change = 0, y_change = 0;
-            for (int i = 0; i < SIZE - 1; i++)
-            for (int j = 0; j < SIZE - i - 1; j++)
-                if (X[j] > X[j + 1])
-                {
-                    x_change = X[j];
-                    X[j] = X[j + 1];
-                    X[j + 1] = x_change;
-                    y_change = Y[j];
-                    Y[j] = Y[j + 1];
-                    Y[j + 1] = y_change;
-                }
-            reader.Close();
-            foreach (var dob in X)
-            {
-                Console.Write(dob + "   ");
-            }
-            foreach (var dob in Y)
-            {
-                Console.Write(dob + "   ");
-            }
+            label2.Visible = false;
         }
 
         private void Form2_Load(object sender, EventArgs e)
         {
-
+            dateTimePicker2.Format = DateTimePickerFormat.Time;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            /*222
             if (radioButton1.Checked)
                 Commons.SyncWay = Sync.Semaphore;
             else if (radioButton2.Checked)
@@ -223,10 +73,26 @@ namespace WindowsFormsApplication7
             else
                 Commons.SyncWay = Sync.Event;
             this.Hide();
+             */
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
+            label1.Visible = false;
+            button2.Visible = false;
+            Thread.Sleep(10);
+            startTime = (dateTimePicker1.Value.Date + dateTimePicker2.Value.TimeOfDay).ToFileTime();
+            waitableTimer = CreateWaitableTimer(IntPtr.Zero, true, "waitabletimer");
+
+            if (SetWaitableTimer(waitableTimer, ref startTime,0, IntPtr.Zero, IntPtr.Zero, true))
+            {
+                WaitForSingleObject(waitableTimer, 0xFFFFFFFF);
+            }
+
+            Form1 mainProgram = new Form1();
+            mainProgram.Show();
+            Hide();
+            /*
             if (radioButton1.Checked)
                 syncWay = 1; // semaphore
             else if (radioButton2.Checked)
@@ -276,6 +142,17 @@ namespace WindowsFormsApplication7
             //CloseHandle(arrayXFile);
             //CloseHandle(arrayYFile);
             ///CloseHandle(syncWayFile);
+             */
+        }
+
+        private void dateTimePicker1_ValueChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dateTimePicker2_Leave(object sender, EventArgs e)
+        {
+            label2.Visible = true;
         }
     }
 }

@@ -228,6 +228,30 @@ namespace WindowsFormsApplication7
             ref STARTUPINFO lpStartupInfo,
             out PROCESS_INFORMATION lpProcessInformation);
 
+        [DllImport("kernel32.dll")]
+        static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);
+
+        //ТАЙМЕРЫ!
+        [DllImport("kernel32.dll")]
+        static extern IntPtr CreateWaitableTimer(IntPtr lpTimerAttributes, bool bManualReset, string lpTimerName);
+
+        public delegate void TimerCompleteDelegate();
+
+        [DllImport("kernel32.dll")]
+        static extern bool SetWaitableTimer(IntPtr hTimer,
+            [In] ref long pDueTime,
+            int lPeriod,
+            TimerCompleteDelegate pfnCompletionRoutine,
+            IntPtr lpArgToCompletionRoutine, bool fResume);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr FindFirstChangeNotification(string lpPathName,
+            bool bWatchSubtree, 
+            uint dwNotifyFilter);
+
+        [DllImport("kernel32.dll")]
+        static extern bool FindNextChangeNotification(IntPtr hChangeHandle);
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct PROCESS_INFORMATION
         {
@@ -255,6 +279,9 @@ namespace WindowsFormsApplication7
         private static IntPtr arrayYPipe;
         [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr syncWayPipe;
+
+        private const string Path = "C:\\Users\\veryoldbarny\\input\\input.txt";
+        private static SECURITY_ATTRIBUTES _secAttr;
 
         public Form1()
         {
@@ -287,6 +314,7 @@ namespace WindowsFormsApplication7
             textBox2.Visible = false;
             startupInfo = new STARTUPINFO();
             processInfo = new PROCESS_INFORMATION();
+            _secAttr = new SECURITY_ATTRIBUTES();
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -312,7 +340,48 @@ namespace WindowsFormsApplication7
                     break;
                 }
             }*/
+            CheckFileExist();
+            uint dwThread;
+            IntPtr fileChangesThread = new IntPtr();
+            fileChangesThread = (IntPtr)CreateThread(ref _secAttr, 0, LookForChanges, 0, SuspendThread(fileChangesThread), out dwThread);
+            ResumeThread(fileChangesThread);
+        }
 
+        private static void CheckFileExist()
+        {
+
+            if (!File.Exists(Path))
+            {
+                DialogResult result = MessageBox.Show("Файл потерялся.\nЖдать появления файла?", "Сообщение", MessageBoxButtons.YesNo);
+                if (result == DialogResult.Yes)
+                {
+                    while (true)
+                    {
+                        if (File.Exists(Path))
+                        {
+                            break;
+                        }
+                        Thread.Sleep(5000);
+                    }
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
+            }
+        }
+
+        private static void LookForChanges()
+        {
+            var changeNotification = FindFirstChangeNotification("C:\\Users\\veryoldbarny\\input\\", true, 0x00000010);
+
+            while (true)
+            {
+                var singleObject = WaitForSingleObject(changeNotification, 1000);
+                if (singleObject != 0x00000000) continue;
+                MessageBox.Show("Файл был изменен.");
+                FindNextChangeNotification(changeNotification);
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -364,7 +433,7 @@ namespace WindowsFormsApplication7
         private void CreatePipe()
         {
 
-            String path = "C:\\Users\\veryoldbarny\\Starter.exe";
+            String pathToStarter = "C:\\Users\\veryoldbarny\\Starter.exe";
             lenPipe = CreateNamedPipe("\\\\.\\pipe\\LengthPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
             arrayXPipe = CreateNamedPipe("\\\\.\\pipe\\ArrayXPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
             arrayYPipe = CreateNamedPipe("\\\\.\\pipe\\ArrayYPipe", 0x00000003, 0x00000004 | 0x00000002 | 0x00000000, 1, 512, 512, 5000, IntPtr.Zero);
@@ -384,7 +453,7 @@ namespace WindowsFormsApplication7
             //PIPE_READMODE_MESSAGE = 0x00000002
             //PIPE_WAIT = 0x00000000
             //PIPE_NOWAIT = 0x00000001
-            CreateProcess(path, null, IntPtr.Zero, IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
+            CreateProcess(pathToStarter, null, IntPtr.Zero, IntPtr.Zero, true, 0, IntPtr.Zero, null, ref startupInfo, out processInfo);
            // Form2 f2 = new Form2();
            // f2.ShowDialog();
         }
@@ -834,8 +903,8 @@ namespace WindowsFormsApplication7
             ThreadStart threadStart = new ThreadStart(action);
             IntPtr h1Handle = new IntPtr();
             uint dwThread;
-            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
-            h1Handle = (IntPtr) CreateThread(ref secAttr, 0, threadStart, 0, SuspendThread(h1Handle), out dwThread);
+            
+            h1Handle = (IntPtr) CreateThread(ref _secAttr, 0, threadStart, 0, SuspendThread(h1Handle), out dwThread);
 
 
             ResumeThread(h1Handle);
