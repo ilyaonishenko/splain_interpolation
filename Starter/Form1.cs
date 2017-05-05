@@ -300,5 +300,15 @@ namespace Starter
                 readFromFile = true;
             }
         }
+
+        private void radioButton4_CheckedChanged(object sender, EventArgs e)
+        {
+            CheckState();
+        }
+
+        private void radioButton5_CheckedChanged(object sender, EventArgs e)
+        {
+            CheckState();
+        }
     }
 }

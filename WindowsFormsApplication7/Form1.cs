@@ -268,8 +268,8 @@ namespace WindowsFormsApplication7
         private static IntPtr c1;
         private static  IntPtr c2;
 
-        private STARTUPINFO startupInfo;
-        private PROCESS_INFORMATION processInfo;
+        private static STARTUPINFO startupInfo;
+        private static PROCESS_INFORMATION processInfo;
 
         [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 1)]
         private static IntPtr lenPipe;
@@ -340,7 +340,6 @@ namespace WindowsFormsApplication7
                     break;
                 }
             }*/
-            CheckFileExist();
             uint dwThread;
             IntPtr fileChangesThread = new IntPtr();
             fileChangesThread = (IntPtr)CreateThread(ref _secAttr, 0, LookForChanges, 0, SuspendThread(fileChangesThread), out dwThread);
@@ -352,7 +351,7 @@ namespace WindowsFormsApplication7
 
             if (!File.Exists(Path))
             {
-                DialogResult result = MessageBox.Show("Файл потерялся.\nЖдать появления файла?", "Сообщение", MessageBoxButtons.YesNo);
+                DialogResult result = MessageBox.Show("Файл не найден.\nЖдать появления файла?", "Сообщение", MessageBoxButtons.YesNo);
                 if (result == DialogResult.Yes)
                 {
                     while (true)
@@ -373,14 +372,26 @@ namespace WindowsFormsApplication7
 
         private static void LookForChanges()
         {
+            
             var changeNotification = FindFirstChangeNotification("C:\\Users\\veryoldbarny\\input\\", true, 0x00000010);
 
             while (true)
             {
+                CheckFileExist();
                 var singleObject = WaitForSingleObject(changeNotification, 1000);
-                if (singleObject != 0x00000000) continue;
-                MessageBox.Show("Файл был изменен.");
+
                 FindNextChangeNotification(changeNotification);
+                if (singleObject != 0x00000000) continue;
+                DialogResult result = MessageBox.Show("Файл был изменен.\nНачать работу с новыми данными?", "Message", MessageBoxButtons.YesNo);
+                if (result == DialogResult.Yes)
+                {
+                    CreatePipe();
+                    /*if (Commons.isRunning)
+                    {
+                        
+                    }*/
+                }
+                //MessageBox.Show("Файл был изменен.");
             }
         }
 
@@ -430,7 +441,7 @@ namespace WindowsFormsApplication7
         }
 
 
-        private void CreatePipe()
+        private static void CreatePipe()
         {
 
             String pathToStarter = "C:\\Users\\veryoldbarny\\Starter.exe";
@@ -607,7 +618,6 @@ namespace WindowsFormsApplication7
             Generator gen = new Generator();
             gen.generate(naturalDotsSize, 1, 3);
              * */
-
         }
 
         private void goWork()
@@ -900,12 +910,11 @@ namespace WindowsFormsApplication7
         private static void StartNewThread(Commons.SplineBox spline, Chart chart, ThreadPriority threadPriority)
         {
             Action action = () => Worker(spline, chart, threadPriority);
-            ThreadStart threadStart = new ThreadStart(action);
-            IntPtr h1Handle = new IntPtr();
+            var threadStart = new ThreadStart(action);
+            var h1Handle = new IntPtr();
             uint dwThread;
             
             h1Handle = (IntPtr) CreateThread(ref _secAttr, 0, threadStart, 0, SuspendThread(h1Handle), out dwThread);
-
 
             ResumeThread(h1Handle);
             //Thread workThread = new Thread(threadStart);

@@ -91,7 +91,7 @@ namespace WindowsFormsApplication7
 
             Form1 mainProgram = new Form1();
             mainProgram.Show();
-            Hide();
+            //Hide();
             /*
             if (radioButton1.Checked)
                 syncWay = 1; // semaphore
